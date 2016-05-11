@@ -1,0 +1,12 @@
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/game.css')
+  body
+    canvas#viewport
+    script(type='text/javascript', src='/socket.io/socket.io.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/dat.gui.min.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/keyboard.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/game.core.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/client.js', charset='utf-8')
