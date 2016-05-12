@@ -195,7 +195,7 @@ game_core.prototype.physics_movement_vector_from_direction = function(x,y) {
 };
 
 game_core.prototype.update_physics = function() {
-        this.server_update_physics();
+    this.server_update_physics();
 };
 /*
  Server side functions

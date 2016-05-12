@@ -8,7 +8,6 @@ var frame_time = 16;
         window.requestAnimationFrame = window[ vendors[ x ] + 'RequestAnimationFrame' ];
         window.cancelAnimationFrame = window[ vendors[ x ] + 'CancelAnimationFrame' ] || window[ vendors[ x ] + 'CancelRequestAnimationFrame' ];
     }
-
     if ( !window.requestAnimationFrame ) {
         window.requestAnimationFrame = function ( callback, element ) {
             var currTime = Date.now(), timeToCall = Math.max( 0, frame_time - ( currTime - lastTime ) );
@@ -20,7 +19,6 @@ var frame_time = 16;
     if ( !window.cancelAnimationFrame ) {
         window.cancelAnimationFrame = function ( id ) { clearTimeout( id ); };
     }
-
 }() );
 
 /* The game_core class */
@@ -30,12 +28,10 @@ var game_core = function(game_instance){
         width : 720,
         height : 480
     };
-
     this.players = {
         self : new game_player(this),
         other : new game_player(this)
     };
-
         //Debugging ghosts, to help visualise things
     this.ghosts = {
             //Our ghost position on the server
@@ -45,19 +41,16 @@ var game_core = function(game_instance){
             //The other players ghost destination position (the lerp)
         pos_other : new game_player(this)
     };
-
     this.ghosts.pos_other.state = 'dest_pos';
-
-    this.ghosts.pos_other.info_color = 'rgba(255,255,255,0.1)';
-
-    this.ghosts.server_pos_self.info_color = 'rgba(255,255,255,0.2)';
-    this.ghosts.server_pos_other.info_color = 'rgba(255,255,255,0.2)';
-
     this.ghosts.server_pos_self.state = 'server_pos';
     this.ghosts.server_pos_other.state = 'server_pos';
 
-    this.ghosts.server_pos_self.pos = { x:20, y:20 };
+    this.ghosts.pos_other.info_color = 'rgba(255,255,255,0.1)';
+    this.ghosts.server_pos_self.info_color = 'rgba(255,255,255,0.2)';
+    this.ghosts.server_pos_other.info_color = 'rgba(255,255,255,0.2)';
+
     this.ghosts.pos_other.pos = { x:500, y:200 };
+    this.ghosts.server_pos_self.pos = { x:20, y:20 };
     this.ghosts.server_pos_other.pos = { x:500, y:200 };
     
         //The speed at which the clients move.
@@ -74,7 +67,6 @@ var game_core = function(game_instance){
     this.create_physics_simulation();
         //Start a fast paced timer for measuring time easier
     this.create_timer();
-
         //Create a keyboard handler
     this.keyboard = new THREEx.KeyboardState();
         //Create the default configuration settings
@@ -146,15 +138,15 @@ var game_player = function( game_instance ) {
     this.pos = { x:500, y:200 };
 };
   
-    game_player.prototype.draw = function(){
-            //Set the color for this player
-        game.ctx.fillStyle = this.color;
-            //Draw a rectangle for us
-        game.ctx.fillRect(this.pos.x - this.size.hx, this.pos.y - this.size.hy, this.size.x, this.size.y);
-            //Draw a status update
-        game.ctx.fillStyle = this.info_color;
-        game.ctx.fillText(this.state, this.pos.x+10, this.pos.y + 4);
-    }; //game_player.draw
+game_player.prototype.draw = function(){
+        //Set the color for this player
+    game.ctx.fillStyle = this.color;
+        //Draw a rectangle for us
+    game.ctx.fillRect(this.pos.x - this.size.hx, this.pos.y - this.size.hy, this.size.x, this.size.y);
+        //Draw a status update
+    game.ctx.fillStyle = this.info_color;
+    game.ctx.fillText(this.state, this.pos.x+10, this.pos.y + 4);
+};
     //Main update loop
 game_core.prototype.update = function(t) {
         //Work out the delta time
@@ -162,7 +154,7 @@ game_core.prototype.update = function(t) {
         //Store the last frame time
     this.lastframetime = t;
         //Update the game specifics
-        this.client_update();
+    this.client_update();
         //schedule the next update
     this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewport );
 }; //game_core.update
@@ -191,8 +183,7 @@ game_core.prototype.check_collision = function( item ) {
         //Fixed point helps be more deterministic
     item.pos.x = item.pos.x.fixed(4);
     item.pos.y = item.pos.y.fixed(4);
-}; //game_core.check_collision
-
+};
 
 game_core.prototype.process_input = function( player ) {
     //It's possible to have recieved multiple inputs by now,
@@ -220,13 +211,13 @@ game_core.prototype.process_input = function( player ) {
                 if(key == 'u') {
                     y_dir -= 1;
                 }
-            } //for all input values
-        } //for each input command
-    } //if we have inputs
-        //we have a direction vector now, so apply the same physics as the client
+            }
+        }
+    }
+        //direction vector
     var resulting_vector = this.physics_movement_vector_from_direction(x_dir,y_dir);
     if(player.inputs.length) {
-        //we can now clear the array since these have been processed
+        //these have been processed, clear the array
         player.last_input_time = player.inputs[ic-1].time;
         player.last_input_seq = player.inputs[ic-1].seq;
     }
@@ -251,9 +242,7 @@ game_core.prototype.update_physics = function() {
     These functions below are specific to the client side only,
     and usually start with client_* to make things clearer.
 */
-
 game_core.prototype.client_handle_input = function(){
-
     //if(this.lit > this.local_time) return;
     //this.lit = this.local_time+0.5; //one second delay
         //This takes input from the client and keeps a record,
@@ -306,7 +295,7 @@ game_core.prototype.client_handle_input = function(){
     } else {
         return {x:0,y:0};
     }
-}; //game_core.client_handle_input
+};
 
 game_core.prototype.client_process_net_prediction_correction = function() {
         //No updates...
@@ -348,7 +337,7 @@ game_core.prototype.client_process_net_prediction_correction = function() {
                 this.client_update_local_position();
             } // if(lastinputseq_index != -1)
         } //if my_last_input_on_server
-}; //game_core.client_process_net_prediction_correction
+};
 
 game_core.prototype.client_process_net_updates = function() {
         //No updates...
@@ -435,49 +424,46 @@ game_core.prototype.client_process_net_updates = function() {
 }; //game_core.client_process_net_updates
 
 game_core.prototype.client_onserverupdate_recieved = function(data){
-            //Lets clarify the information we have locally. One of the players is 'hosting' and
-            //the other is a joined in client, so we name these host and client for making sure
-            //the positions we get from the server are mapped onto the correct local sprites
-        var player_host = this.players.self.host ?  this.players.self : this.players.other;
-        var player_client = this.players.self.host ?  this.players.other : this.players.self;
-        var this_player = this.players.self;
-            //Store the server time (this is offset by the latency in the network, by the time we get it)
-        this.server_time = data.t;
-            //Update our local offset time from the last server update
-        this.client_time = this.server_time - (this.net_offset/1000);
-            //One approach is to set the position directly as the server tells you.
-            //This is a common mistake and causes somewhat playable results on a local LAN, for example,
-            //but causes terrible lag when any ping/latency is introduced. The player can not deduce any
-            //information to interpolate with so it misses positions, and packet loss destroys this approach
-            //even more so. See 'the bouncing ball problem' on Wikipedia.
-        if(this.naive_approach) {
-            if(data.hp) {
-                player_host.pos = this.pos(data.hp);
-            }
-            if(data.cp) {
-                player_client.pos = this.pos(data.cp);
-            }
-        } else {
-                //Cache the data from the server,
-                //and then play the timeline
-                //back to the player with a small delay (net_offset), allowing
-                //interpolation between the points.
-            this.server_updates.push(data);
-                //we limit the buffer in seconds worth of updates
-                //60fps*buffer seconds = number of samples
-            if(this.server_updates.length >= ( 60*this.buffer_size )) {
-                this.server_updates.splice(0,1);
-            }
-                //We can see when the last tick we know of happened.
-                //If client_time gets behind this due to latency, a snap occurs
-                //to the last tick. Unavoidable, and a reallly bad connection here.
-                //If that happens it might be best to drop the game after a period of time.
-            this.oldest_tick = this.server_updates[0].t;
-                //Handle the latest positions from the server
-                //and make sure to correct our local predictions, making the server have final say.
-            this.client_process_net_prediction_correction();
-        } //non naive
-}; //game_core.client_onserverupdate_recieved
+    var player_host = this.players.self.host ?  this.players.self : this.players.other;
+    var player_client = this.players.self.host ?  this.players.other : this.players.self;
+    var this_player = this.players.self;
+        //Store the server time (this is offset by the latency in the network, by the time we get it)
+    this.server_time = data.t;
+        //Update our local offset time from the last server update
+    this.client_time = this.server_time - (this.net_offset/1000);
+        //One approach is to set the position directly as the server tells you.
+        //This is a common mistake and causes somewhat playable results on a local LAN, for example,
+        //but causes terrible lag when any ping/latency is introduced. The player can not deduce any
+        //information to interpolate with so it misses positions, and packet loss destroys this approach
+        //even more so. See 'the bouncing ball problem' on Wikipedia.
+    if(this.naive_approach) {
+        if(data.hp) {
+            player_host.pos = this.pos(data.hp);
+        }
+        if(data.cp) {
+            player_client.pos = this.pos(data.cp);
+        }
+    } else {
+            //Cache the data from the server,
+            //and then play the timeline
+            //back to the player with a small delay (net_offset), allowing
+            //interpolation between the points.
+        this.server_updates.push(data);
+            //we limit the buffer in seconds worth of updates
+            //60fps*buffer seconds = number of samples
+        if(this.server_updates.length >= ( 60*this.buffer_size )) {
+            this.server_updates.splice(0,1);
+        }
+            //We can see when the last tick we know of happened.
+            //If client_time gets behind this due to latency, a snap occurs
+            //to the last tick. Unavoidable, and a reallly bad connection here.
+            //If that happens it might be best to drop the game after a period of time.
+        this.oldest_tick = this.server_updates[0].t;
+            //Handle the latest positions from the server
+            //and make sure to correct our local predictions, making the server have final say.
+        this.client_process_net_prediction_correction();
+    }
+};
 
 game_core.prototype.client_update_local_position = function(){
  if(this.client_predict) {
@@ -492,9 +478,9 @@ game_core.prototype.client_update_local_position = function(){
         
             //We handle collision on client if predicting.
         this.check_collision( this.players.self );
-    }  //if(this.client_predict)
+    }
 
-}; //game_core.prototype.client_update_local_position
+};
 
 game_core.prototype.client_update_physics = function() {
         //Fetch the new direction from the input buffer,
@@ -505,7 +491,7 @@ game_core.prototype.client_update_physics = function() {
         this.players.self.cur_state.pos = this.v_add( this.players.self.old_state.pos, nd);
         this.players.self.state_time = this.local_time;
     }
-}; //game_core.client_update_physics
+};
 
 game_core.prototype.client_update = function() {
 
@@ -556,8 +542,7 @@ game_core.prototype.create_physics_simulation = function() {
         this._pdte = new Date().getTime();
         this.update_physics();
     }.bind(this), 15);
-}; //game_core.client_create_physics_simulation
-
+};
 
 game_core.prototype.client_create_ping_timer = function() {
 
@@ -568,8 +553,7 @@ game_core.prototype.client_create_ping_timer = function() {
         this.socket.send('p.' + (this.last_ping_time) );
     }.bind(this), 1000);
     
-}; //game_core.client_create_ping_timer
-
+};
 
 game_core.prototype.client_create_configuration = function() {
 
@@ -602,7 +586,7 @@ game_core.prototype.client_create_configuration = function() {
     this.fps_avg_acc = 0;               //The accumulation of the last avgcount fps samples
     this.lit = 0;
     this.llt = new Date().getTime();
-};//game_core.client_create_configuration
+};
 
 game_core.prototype.client_create_debug_gui = function() {
     this.gui = new dat.GUI();
@@ -647,7 +631,7 @@ game_core.prototype.client_create_debug_gui = function() {
         //_netsettings.add(this, 'oldest_tick').step(0.001).listen();
         _netsettings.open();
 
-}; //game_core.client_create_debug_gui
+};
 
 game_core.prototype.client_reset_positions = function() {
 
@@ -754,7 +738,6 @@ game_core.prototype.client_onnetmessage = function(data) {
 }; //client_onnetmessage
 
 game_core.prototype.client_ondisconnect = function(data) {
-    
         //When we disconnect, we don't know if the other player is
         //connected or not, and since we aren't, everything goes to offline
     this.players.self.info_color = 'rgba(255,255,255,0.1)';
@@ -766,24 +749,24 @@ game_core.prototype.client_ondisconnect = function(data) {
 }; //client_ondisconnect
 
 game_core.prototype.client_connect_to_server = function() {
-            //Store a local reference to our connection to the server
-        this.socket = io.connect();
-            //When we connect, we are not 'connected' until we have a server id
-            //and are placed in a game by the server. The server sends us a message for that.
-        this.socket.on('connect', function(){
-            this.players.self.state = 'connecting';
-        }.bind(this));
-            //Sent when we are disconnected (network, server down, etc)
-        this.socket.on('disconnect', this.client_ondisconnect.bind(this));
-            //Sent each tick of the server simulation. This is our authoritive update
-        this.socket.on('onserverupdate', this.client_onserverupdate_recieved.bind(this));
-            //Handle when we connect to the server, showing state and storing id's.
-        this.socket.on('onconnected', this.client_onconnected.bind(this));
-            //On error we just show that we are not connected for now. Can print the data.
-        this.socket.on('error', this.client_ondisconnect.bind(this));
-            //On message from the server, we parse the commands and send it to the handlers
-        this.socket.on('message', this.client_onnetmessage.bind(this));
-}; //game_core.client_connect_to_server
+        //Store a local reference to our connection to the server
+    this.socket = io.connect();
+        //When we connect, we are not 'connected' until we have a server id
+        //and are placed in a game by the server. The server sends us a message for that.
+    this.socket.on('connect', function(){
+        this.players.self.state = 'connecting';
+    }.bind(this));
+        //Sent when we are disconnected (network, server down, etc)
+    this.socket.on('disconnect', this.client_ondisconnect.bind(this));
+        //Sent each tick of the server simulation. This is our authoritive update
+    this.socket.on('onserverupdate', this.client_onserverupdate_recieved.bind(this));
+        //Handle when we connect to the server, showing state and storing id's.
+    this.socket.on('onconnected', this.client_onconnected.bind(this));
+        //On error we just show that we are not connected for now. Can print the data.
+    this.socket.on('error', this.client_ondisconnect.bind(this));
+        //On message from the server, we parse the commands and send it to the handlers
+    this.socket.on('message', this.client_onnetmessage.bind(this));
+};
 game_core.prototype.client_refresh_fps = function() {
         //We store the fps for 10 frames, by adding it to this accumulator
     this.fps = 1/this.dt;
