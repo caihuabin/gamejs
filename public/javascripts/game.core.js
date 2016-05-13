@@ -157,7 +157,7 @@ game_core.prototype.update = function(t) {
     this.client_update();
         //schedule the next update
     this.updateid = window.requestAnimationFrame( this.update.bind(this), this.viewport );
-}; //game_core.update
+};
 
 /*
     Shared between server and client.
@@ -298,7 +298,6 @@ game_core.prototype.client_handle_input = function(){
 };
 
 game_core.prototype.client_process_net_prediction_correction = function() {
-        //No updates...
     if(!this.server_updates.length) return;
         //The most recent server update
     var latest_server_data = this.server_updates[this.server_updates.length-1];
@@ -306,7 +305,6 @@ game_core.prototype.client_process_net_prediction_correction = function() {
     var my_server_pos = this.players.self.host ? latest_server_data.hp : latest_server_data.cp;
         //Update the debug server position block
     this.ghosts.server_pos_self.pos = this.pos(my_server_pos);
-
             //here we handle our local input prediction ,
             //by correcting it with the server and reconciling its differences
         var my_last_input_on_server = this.players.self.host ? latest_server_data.his : latest_server_data.cis;
@@ -421,7 +419,7 @@ game_core.prototype.client_process_net_updates = function() {
             }
         }
     } //if target && previous
-}; //game_core.client_process_net_updates
+};
 
 game_core.prototype.client_onserverupdate_recieved = function(data){
     var player_host = this.players.self.host ?  this.players.self : this.players.other;
@@ -526,7 +524,7 @@ game_core.prototype.client_update = function() {
     }
         //Work out the fps average
     this.client_refresh_fps();
-}; //game_core.update_client
+};
 
 game_core.prototype.create_timer = function(){
     setInterval(function(){
@@ -648,7 +646,7 @@ game_core.prototype.client_reset_positions = function() {
     this.ghosts.server_pos_self.pos = this.pos(this.players.self.pos);
     this.ghosts.server_pos_other.pos = this.pos(this.players.other.pos);
     this.ghosts.pos_other.pos = this.pos(this.players.other.pos);
-}; //game_core.client_reset_positions
+};
 
 game_core.prototype.client_onreadygame = function(data) {
 
@@ -666,7 +664,7 @@ game_core.prototype.client_onreadygame = function(data) {
     this.players.self.state = 'YOU ' + this.players.self.state;
         //Make sure colors are synced up
      this.socket.send('c.' + this.players.self.color);
-}; //client_onreadygame
+};
 
 game_core.prototype.client_onjoingame = function(data) {
         //We are not the host
@@ -676,7 +674,7 @@ game_core.prototype.client_onjoingame = function(data) {
     this.players.self.info_color = '#00bb00';
         //Make sure the positions match servers and other clients
     this.client_reset_positions();
-}; //client_onjoingame
+};
 
 game_core.prototype.client_onhostgame = function(data) {
         //The server sends the time when asking us to host, but it should be a new game.
@@ -691,7 +689,7 @@ game_core.prototype.client_onhostgame = function(data) {
     this.players.self.info_color = '#cc0000';
         //Make sure we start in the correct place as the host.
     this.client_reset_positions();
-}; //client_onhostgame
+};
 
 game_core.prototype.client_onconnected = function(data) {
         //The server responded that we are now in a game,
@@ -701,7 +699,7 @@ game_core.prototype.client_onconnected = function(data) {
     this.players.self.info_color = '#cc0000';
     this.players.self.state = 'connected';
     this.players.self.online = true;
-}; //client_onconnected
+};
 
 game_core.prototype.client_on_otherclientcolorchange = function(data) {
     this.players.other.color = data;
@@ -710,7 +708,7 @@ game_core.prototype.client_on_otherclientcolorchange = function(data) {
 game_core.prototype.client_onping = function(data) {
     this.net_ping = new Date().getTime() - parseFloat( data );
     this.net_latency = this.net_ping/2;
-}; //client_onping
+};
 
 game_core.prototype.client_onnetmessage = function(data) {
     var commands = data.split('.');
@@ -735,7 +733,7 @@ game_core.prototype.client_onnetmessage = function(data) {
             } //subcommand
         break; //'s'
     } //command
-}; //client_onnetmessage
+};
 
 game_core.prototype.client_ondisconnect = function(data) {
         //When we disconnect, we don't know if the other player is
@@ -746,7 +744,7 @@ game_core.prototype.client_ondisconnect = function(data) {
 
     this.players.other.info_color = 'rgba(255,255,255,0.1)';
     this.players.other.state = 'not-connected';
-}; //client_ondisconnect
+};
 
 game_core.prototype.client_connect_to_server = function() {
         //Store a local reference to our connection to the server
@@ -778,7 +776,7 @@ game_core.prototype.client_refresh_fps = function() {
         this.fps_avg_count = 1;
         this.fps_avg_acc = this.fps;
     } //reached 10 frames
-}; //game_core.client_refresh_fps
+};
 game_core.prototype.client_draw_info = function() {
         //We don't want this to be too distracting
     this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -800,4 +798,4 @@ game_core.prototype.client_draw_info = function() {
     } //if we are the host
         //Reset the style back to full white.
     this.ctx.fillStyle = 'rgba(255,255,255,1)';
-}; //game_core.client_draw_help
+};
