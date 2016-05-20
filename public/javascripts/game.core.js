@@ -1,4 +1,4 @@
-var frame_time = 1000/60; // run the local game at 16ms, 60hz
+/*var frame_time = 1000/60; // run the local game at 16ms, 60hz
 var frame_time = 16;
 
 ( function () {
@@ -20,7 +20,7 @@ var frame_time = 16;
         window.cancelAnimationFrame = function ( id ) { clearTimeout( id ); };
     }
 }() );
-
+*/
 /* The game_core class */
 var game_core = function(game_instance){
     this.instance = game_instance;
@@ -64,6 +64,8 @@ var game_core = function(game_instance){
     this._dte = new Date().getTime();   //The local timer last frame time
         //Start a physics loop, this is separate to the rendering
         //as this happens at a fixed frequency
+
+    //循环处理用户输入并更新player属性
     this.create_physics_simulation();
         //Start a fast paced timer for measuring time easier
     this.create_timer();
@@ -148,6 +150,7 @@ game_player.prototype.draw = function(){
     game.ctx.fillText(this.state, this.pos.x+10, this.pos.y + 4);
 };
     //Main update loop
+//循环更新canvas,本地:处理输入、发送,服务器:是否数据更新
 game_core.prototype.update = function(t) {
         //Work out the delta time
     this.dt = this.lastframetime ? ( (t - this.lastframetime)/1000.0).fixed() : 0.016;
@@ -338,7 +341,6 @@ game_core.prototype.client_process_net_prediction_correction = function() {
 };
 
 game_core.prototype.client_process_net_updates = function() {
-        //No updates...
     if(!this.server_updates.length) return;
     //First : Find the position in the updates, on the timeline
     //We call this current_time, then we find the past_pos and the target_pos using this,
@@ -692,9 +694,6 @@ game_core.prototype.client_onhostgame = function(data) {
 };
 
 game_core.prototype.client_onconnected = function(data) {
-        //The server responded that we are now in a game,
-        //this lets us store the information about ourselves and set the colors
-        //to show we are now ready to be playing.
     this.players.self.id = data.id;
     this.players.self.info_color = '#cc0000';
     this.players.self.state = 'connected';
@@ -703,7 +702,7 @@ game_core.prototype.client_onconnected = function(data) {
 
 game_core.prototype.client_on_otherclientcolorchange = function(data) {
     this.players.other.color = data;
-}; //game_core.client_on_otherclientcolorchange
+};
 
 game_core.prototype.client_onping = function(data) {
     this.net_ping = new Date().getTime() - parseFloat( data );
@@ -716,7 +715,7 @@ game_core.prototype.client_onnetmessage = function(data) {
     var subcommand = commands[1] || null;
     var commanddata = commands[2] || null;
     switch(command) {
-        case 's': //server message
+        case 's':
             switch(subcommand) {
                 case 'h' : //host a game requested
                     this.client_onhostgame(commanddata); break;
@@ -730,9 +729,9 @@ game_core.prototype.client_onnetmessage = function(data) {
                     this.client_onping(commanddata); break;
                 case 'c' : //other player changed colors
                     this.client_on_otherclientcolorchange(commanddata); break;
-            } //subcommand
-        break; //'s'
-    } //command
+            }
+        break;
+    }
 };
 
 game_core.prototype.client_ondisconnect = function(data) {
@@ -747,7 +746,6 @@ game_core.prototype.client_ondisconnect = function(data) {
 };
 
 game_core.prototype.client_connect_to_server = function() {
-        //Store a local reference to our connection to the server
     this.socket = io.connect();
         //When we connect, we are not 'connected' until we have a server id
         //and are placed in a game by the server. The server sends us a message for that.
@@ -790,12 +788,11 @@ game_core.prototype.client_draw_info = function() {
         this.ctx.fillText('fake_lag : Add fake ping/lag for testing, applies only to your inputs (watch server_pos block!). ', 10 , 170);
         this.ctx.fillText('client_smoothing/client_smooth : When updating players information from the server, it can smooth them out.', 10 , 210);
         this.ctx.fillText(' This only applies to other clients when prediction is enabled, and applies to local player with no prediction.', 170 , 230);
-    } //if this.show_help
-        //Draw some information for the host
+    }
     if(this.players.self.host) {
         this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
         this.ctx.fillText('You are the host', 10 , 465);
-    } //if we are the host
+    }
         //Reset the style back to full white.
     this.ctx.fillStyle = 'rgba(255,255,255,1)';
 };

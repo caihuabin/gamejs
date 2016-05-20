@@ -2,11 +2,30 @@ doctype html
 html
   head
     title= title
+    link(rel='stylesheet', href='/stylesheets/normalize.css')
     link(rel='stylesheet', href='/stylesheets/game.css')
   body
-    canvas#viewport
+    a#fork-me(href='https://github.com/icyse/icyse.github.io', target='_blank')
+        img(src='/images/fork-me-on-github.png', alt='Fork me on Github')
+    canvas#viewport Canvas not supported
+    div#overlayDiv.overlay
+        div.title GameJs
+        div#progressDiv
+            div#progressPercentDiv 0%
+    audio#manAtWar(preload='auto')
+        source(src='/sounds/ManAtArms.mp3', type='audio/mp3')
+        source(src='/sounds/ManAtArms.ogg', type='audio/ogg')
     script(type='text/javascript', src='/socket.io/socket.io.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/dat.gui.min.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/keyboard.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/game.core.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/client.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/animationFrame.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/mathlib-min.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/k3d-min.js', charset='utf-8')
+
+    script(type='text/javascript', src='/javascripts/lib/roundedRectangle.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/progressbar.js', charset='utf-8')
+
+    script(type='text/javascript', src='/javascripts/lib/stopwatch.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/animationTimer.js', charset='utf-8')
+
+    script(type='text/javascript', src='/javascripts/lib/sprites.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/lib/gameEngine.js', charset='utf-8')
+    script(type='text/javascript', src='/javascripts/game.js', charset='utf-8')

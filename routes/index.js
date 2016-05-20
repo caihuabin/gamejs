@@ -5,6 +5,9 @@ var router = express.Router();
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
+router.get('/test', function(req, res, next) {
+  res.render('test', { title: 'GameJs' });
+});
 router.get('/game', function(req, res, next) {
   res.render('game', { title: 'GameJs' });
 });

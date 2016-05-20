@@ -1,12 +1,25 @@
-var frame_time = 45; //on server we run at 45ms, 22hz
 var requestAnimationFrame, cancelAnimationFrame;
 ( function () {
+    var frame_time = 45; //on server we run at 45ms, 22hz
     var lastTime = 0;
+    var timeout = 0;
     requestAnimationFrame = function ( callback, element ) {
-        var currTime = Date.now(), 
+        /*var currTime = Date.now(), 
             timeToCall = Math.max( 0, frame_time - ( currTime - lastTime ) );
         var id = setTimeout( function() { callback( currTime + timeToCall ); }, timeToCall );
         lastTime = currTime + timeToCall;
+        return id;*/
+        var start,
+            finish;
+
+        var id = setTimeout( function () {
+           start = +new Date();
+           callback(start);
+           finish = +new Date();
+
+           timeout = frame_time - (finish - start);
+
+        }, timeout);
         return id;
     };
     cancelAnimationFrame = function ( id ) { clearTimeout( id ); };
@@ -266,4 +279,4 @@ game_core.prototype.create_physics_simulation = function() {
         this._pdte = new Date().getTime();
         this.update_physics();
     }.bind(this), 15);
-}; //game_core.client_create_physics_simulation
+};

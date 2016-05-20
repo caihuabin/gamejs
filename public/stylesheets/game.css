@@ -1,5 +1,5 @@
 html , body {
-	background: #212121; 
+	background: #060e1b; 
 	color: #fff; 
 	font-family: Helvetica;
 	margin: 0; 
@@ -7,11 +7,69 @@ html , body {
 }
 
 #viewport {
-	border:solid 1px #333;
-	height : 480px;
+	display: block;
 	margin: auto;
 	left:0; right:0; top:0; bottom:0;
 	position: absolute;
-	width : 720px;
-	z-index:100;
+	opacity: 0.5;
+	cursor: crosshair;
+}
+
+#fork-me{
+    position:fixed;
+    top:0;
+    left:0;
+    border:0;
+    z-index:1000;
+    width:25%;
+    max-width: 149px;
+    min-width: 96px;
+}
+#fork-me img{
+    border:0;
+    width:100%;
+}
+.overlay{
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: rgba(0, 0, 0, 0.6);
+	z-index: 1;
+	font-family: Georgia, "Cambria", serif;
+
+	/* display: none; */
+}
+.title{
+	text-align: center;
+	font-size: 2em;
+	margin:2em auto;
+}
+#progressDiv{
+	position: absolute;
+	left:50%;
+	top:50%;
+	margin-left: -250px;
+	margin-top: -40px;
+	width:500px;
+	height: 80px;
+}
+#progressPercentDiv{
+	position: absolute;
+	top: 50%;
+	line-height: 18px;
+	margin-top: -9px;
+
+}
+
+.toast {
+   background: rgba(255, 255, 255, 0.7);
+   border: thin solid skyblue;
+   -webkit-box-shadow: rgba(0,0,0,0.3) 2px 2px 4px;
+   -moz-box-shadow: rgba(100,140,230,0.5) 2px 2px 6px;
+   box-shadow: rgba(100,140,230,0.5) 2px 2px 6px;
+   -o-box-shadow: rgba(100,140,230,0.5) 2px 2px 6px;
+   position: absolute;
+   /* display: none; */
 }
