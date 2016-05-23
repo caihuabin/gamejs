@@ -123,17 +123,9 @@ var Game = function (gameName, canvasId) {
    //window.onkeypress = function (e) { self.keyPressed(e)  };
    window.onkeyup = function (e) { self.keyUp(e)  };
 
-   canvas.addEventListener( 'mousemove', function( e ) {
+   canvas.addEventListener( 'click', function( e ) {
       e.preventDefault();
-      self.mouseMove(canvas, e);
-   });
-   canvas.addEventListener( 'mousedown', function( e ) {
-      e.preventDefault();
-      self.mouseDown(e);
-   });
-   canvas.addEventListener( 'mouseup', function( e ) {
-      e.preventDefault();
-      self.mouseUp(e);
+      self.mouseClick(canvas, e);
    });
 
    return this;
@@ -520,21 +512,8 @@ Game.prototype = {
       };
       return listener;
    },
-
-   mouseDown: function(e){
-      var listener = this.findMouseListener('mousedown');
-      if(listener){
-         listener(e);
-      }
-   },
-   mouseUp: function(e){
-      var listener = this.findMouseListener('mouseup');
-      if(listener){
-         listener(e);
-      }
-   },
-   mouseMove: function(canvas, e){
-      var listener = this.findMouseListener('mousemove');
+   mouseClick: function(canvas, e){
+      var listener = this.findMouseListener('mouseclick');
       if(listener){
          listener(canvas, e);
       }
@@ -597,11 +576,21 @@ Game.prototype = {
    // sprites, so this method should be used sparingly.
    
    getSprite: function (name) { 
+      var i;
       for(i in this.sprites) {
          if (this.sprites[i].name === name)
             return this.sprites[i];
       }
       return null;      
+   },
+   removeSprite: function (sprite) {
+      var len = this.sprites.length;
+        for(var i = 0; i < len; i++){
+            if(this.sprites[i] === sprite){
+                this.sprites.splice(i, 1);
+                break;
+            }
+        }
    },
 
    // Override the following methods as desired:

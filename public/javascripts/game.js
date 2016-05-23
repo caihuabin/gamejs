@@ -8,8 +8,12 @@ var CONSTANT = {
     WORLD_HEIGHT: window.innerHeight,
     SPACESHIPWIDTH: 64,
     SPACESHIPHEIGHT: 64,
+    SPACESHIPSIZE: 32,
+    FIRE_HUE: 120,
 };
 var game = new Game('game', 'viewport');
+
+var game_client = new GameClient();
 
 var interval,
 lastKeyListenerTime = 0,
@@ -24,7 +28,6 @@ progressbar.appendTo(progressDiv);
 game.context.canvas.width = window.innerWidth;
 game.context.canvas.height = window.innerHeight;
 
-var stopWatch = new Stopwatch();
 var spaceShipPainter = {
     engineThrust: false,
     thrust: function(angle){
@@ -41,7 +44,7 @@ var spaceShipPainter = {
             ctx.rotate(sprite.heading);
             ctx.translate(0, -4);
             ctx.globalAlpha = 0.4 + Rnd() * 0.5;
-            ctx.fillStyle = sprite.name === 'player1' ? CONSTANT.SPACESHIPCOLOR1 : CONSTANT.SPACESHIPCOLOR2;
+            ctx.fillStyle = sprite.color;
             ctx.beginPath();
             ctx.moveTo(-12, 20);
             ctx.lineTo(12, 20);
@@ -72,8 +75,6 @@ var spaceShipPainter = {
 var handle_input = {
     execute: function(sprite, context, time){
         var angle = null;
-        var x_dir = 0;
-        var y_dir = 0;
         if (sprite.input.left)
         {
             sprite.inputs.push({input: 'l', seq: ++sprite.input_seq, time: time});
@@ -102,39 +103,85 @@ var handle_input = {
            else if (sprite.input.right) angle = 135;
            else angle = 181;
         }
-        if (angle !== null)
+        if (!!sprite.input.mouse)
         {
-            sprite.heading = angle*RAD;
-            sprite.painter.thrust(angle);
+            sprite.inputs.push({input: 'M', data: sprite.input.mouse, seq: ++sprite.input_seq, time: time});
+            sprite.input.mouse = null;
+        }
+        if(sprite.input.score){
+            sprite.inputs.push({input: '+', seq: ++sprite.input_seq, time: time});
+            sprite.input.score = false;
+        }
+        if(sprite.input.damage){
+            sprite.inputs.push({input: '-', seq: ++sprite.input_seq, time: time});
+            sprite.input.damage = false;
         }
 
+        if (angle !== null)
+        {
+            sprite.inputs.push({input: 'A', data: angle * RAD, seq: ++sprite.input_seq, time: time});
+        }
+    }
+};
+var process_input = {
+    execute: function(sprite, context, time){
+        
+        var x_dir = 0;
+        var y_dir = 0;
+        var heading = null;
+        var server_packet = 'i#';
+        var server_inputs = [];
         var ic = sprite.inputs.length;
         if(ic) {
             for(var j = 0; j < ic; ++j) {
                     //don't process ones we already have simulated locally
                 if(sprite.inputs[j].seq <= sprite.last_input_seq) continue;
-                var input = sprite.inputs[j].input;
-                    if(input == 'l') {
-                        x_dir -= 1;
-                    }
-                    if(input == 'r') {
-                        x_dir += 1;
-                    }
-                    if(input == 'd') {
-                        y_dir += 1;
-                    }
-                    if(input == 'u') {
-                        y_dir -= 1;
-                    }
+                var item = sprite.inputs[j],
+                    input = item.input;
+                server_inputs.push(item);
+                switch (input)
+                {
+                    case 'l':
+                        --x_dir;
+                        break;
+                    case 'r':
+                        ++x_dir;
+                        break;
+                    case 'u':
+                        --y_dir;
+                        break;
+                    case 'd':
+                        ++y_dir;
+                        break;
+                    case 'M':
+                        sprite.fires.push(new Fire(sprite.left, sprite.top, item.data.x, item.data.y));
+                        break;
+                    case 'A':
+                        sprite.painter.thrust(item.data);
+                        heading = item.data;
+                        break;
+                    default :
+                        break;
+                }
+            }
+            if(server_inputs.length > 0 && sprite.name === 'self_sprite'){
+                server_packet += JSON.stringify(server_inputs);
+                game_client.socket.send(server_packet);
             }
             sprite.last_input_time = sprite.inputs[ic-1].time;
             sprite.last_input_seq = sprite.inputs[ic-1].seq;
+            sprite.inputs = [];
         }
-        sprite.top += y_dir * game.pixelsPerFrame(time, sprite.velocityY);
-        sprite.left += x_dir * game.pixelsPerFrame(time, sprite.velocityX);
-        
+        //sprite.top += y_dir * game.pixelsPerFrame(time, sprite.velocityY);
+        sprite.top += y_dir * sprite.velocityY/60;
+        sprite.left += x_dir * sprite.velocityX/60;
+        if(heading !== null){
+            sprite.heading = heading;
+        }
+
     }
 };
+
 var check_collision = {
     execute: function(sprite, context, time){
         if(sprite.top <= sprite.position_limit.top_min) {
@@ -149,44 +196,58 @@ var check_collision = {
         if(sprite.left >= sprite.position_limit.left_max ) {
             sprite.left = sprite.position_limit.left_max;
         }
+        if(sprite.heading > Math.PI * 2 || sprite.heading < 0){
+            sprite.heading = Math.PI/2;
+        }
     }
 };
 
-var player1 = new Sprite('player1', spaceShipPainter, [handle_input, check_collision]);
-player1.width = CONSTANT.SPACESHIPWIDTH;
-player1.height = CONSTANT.SPACESHIPHEIGHT;
+/*var self_sprite = createSprite('self_sprite', spaceShipPainter, [handle_input, process_input, check_collision]);
+game.addSprite(self_sprite);*/
 
-player1.top = CONSTANT.WORLD_HEIGHT - player1.height/2;
-player1.left = player1.width/2;
-
-player1.input = {left:false, right:false, up: false, down: false};
-player1.inputs = [];
-player1.input_seq = 0;
-player1.last_input_seq = -1;
-player1.position_limit = {
-    top_min: 0 + player1.height/2,
-    left_min: 0 + player1.width/2,
-    top_max: CONSTANT.WORLD_HEIGHT - player1.height/2,
-    left_max: CONSTANT.WORLD_WIDTH - player1.width/2
-};
-player1.velocityX = player1.velocityY = 500; // pixels/second
-
-player1.heading = Math.PI/2;
-game.addSprite(player1);
-
-var player2 = new Sprite('player2', spaceShipPainter, []);
-player2.left = player2.top = 500;
-player2.heading = Math.PI*1.25;
-game.addSprite(player2);
 // Game Paint Methods.........................................
    
 game.startAnimate = function () {
-   paintSpace();
+   
 };
 game.paintOverSprites = function () {
+    var ctx = this.context;
+    var sprites = this.sprites;
+
+    CONSTANT.FIRE_HUE += 0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    var self_sprite = this.getSprite('self_sprite');
+
+    sprites.forEach(function(sprite){
+        var fires = sprite.fires,
+            i = fires.length-1,
+            hit = false;
+        while(i > -1){
+            fires[i].draw(ctx);
+            fires[i].update();
+
+            for(var j = 0; j < sprites.length; j++){
+                if(sprites[j] !== sprite){
+                    hit = fires[i].hit(sprites[j].left, sprites[j].top);
+                    if(hit){
+                        sprites[j].input.damage = true;
+                        sprite.input.score = true;
+                    }
+                }
+            }
+
+            (hit || fires[i].end()) && fires.splice( i, 1 );
+            --i;
+        }
+    });
+
+    ctx.restore();
 };
    
-game.paintUnderSprites = function () { // Draw things other than sprites
+game.paintUnderSprites = function () {
+    paintSpace();
 };
 // Key Listeners..............................................
 
@@ -203,7 +264,8 @@ game.addKeyListener(
    {
       key: 'right arrow',
       listener: function () {
-        player1.input.right = true;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.right = true;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -216,7 +278,8 @@ game.addKeyListener(
    {
       key: 'right arrow up',
       listener: function () {
-        player1.input.right = false;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.right = false;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -230,7 +293,8 @@ game.addKeyListener(
    {
       key: 'left arrow',
       listener: function () {
-        player1.input.left = true;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.left = true;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -242,7 +306,8 @@ game.addKeyListener(
    {
       key: 'left arrow up',
       listener: function () {
-        player1.input.left = false;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.left = false;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -254,7 +319,8 @@ game.addKeyListener(
    {
       key: 'up arrow',
       listener: function () {
-        player1.input.up = true;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.up = true;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -266,7 +332,8 @@ game.addKeyListener(
    {
       key: 'up arrow up',
       listener: function () {
-        player1.input.up = false;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.up = false;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -278,20 +345,8 @@ game.addKeyListener(
    {
       key: 'down arrow',
       listener: function () {
-        player1.input.down = true;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-
-game.addMouseListener(
-   {
-      key: 'mousedown',
-      listener: function (e) {
-        player1.input.mouse = true;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.down = true;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -303,7 +358,8 @@ game.addKeyListener(
    {
       key: 'down arrow up',
       listener: function () {
-        player1.input.down = false;
+        var self_sprite = game.getSprite('self_sprite');
+        self_sprite.input.down = false;
          var now = +new Date();
          if (now - lastKeyListenerTime > 200) { // throttle
             lastKeyListenerTime = now;
@@ -311,30 +367,20 @@ game.addKeyListener(
       }
    }
 );
-game.addMouseListener(
-   {
-      key: 'mouseup',
-      listener: function (e) {
-        player1.input.mouse = false;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addMouseListener(
-   {
-      key: 'mousemove',
-      listener: function (canvas, e) {
-        var pos = windowToCanvas(canvas, e);
 
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
+game.addMouseListener(
+    {
+        key: 'mouseclick',
+        listener: function (canvas, e) {
+            var pos = windowToCanvas(canvas, e);
+            var now = +new Date();
+            var self_sprite = game.getSprite('self_sprite');
+            self_sprite.input.mouse = pos;
+            if (now - lastKeyListenerTime > 200) { // throttle
+                lastKeyListenerTime = now;
+            }
+        }
+    }
 );
 
 // Initialization.............................................
@@ -342,9 +388,6 @@ game.addMouseListener(
 game.queueImage('/images/image1.png');
 game.queueImage('/images/image2.png');
 game.queueImage('/images/image3.png');
-game.queueImage('/images/image4.png');
-game.queueImage('/images/image5.png');
-
 
 game.queueCanvasFun(
     {
@@ -414,80 +457,145 @@ interval = setInterval( function (e) {
         overlayDiv.style.display = 'none';
 
         game.playSound('manAtWar');
-
-        game.start();
+        game_client.start();
+        //game.start();
     }
     progressbar.draw(loadingPercentComplete);
     progressPercentDiv.innerHTML = Math.floor(loadingPercentComplete) + '%';
 }, 16);
 
 
-var paintSpace = (function(document, game, CONSTANT){
-    var gameContext = game.context,
+var paintSpace = (function(game, CONSTANT){
+    var ctx = game.context,
         stars = [],
         hue = CONSTANT.STAR_HUE,
         maxStars = CONSTANT.MAX_STARS,
-        w = gameContext.canvas.width,
-        h = gameContext.canvas.height;
+        w = ctx.canvas.width,
+        h = ctx.canvas.height;
 
+    var maxOrbitRadius = maxOrbit(w, h);
+    
     /*var starImg = new Image();
     starImg.src = game.getCanvas('starCanvas').toDataURL('image/png');*/
 
-    
-    function maxOrbit(x, y) {
-        var max = Math.max(x, y),
-            diameter = Math.round(Math.sqrt(max * max * 2));
-        return diameter / 2;
-    }
-
-    var maxOrbitRadius = maxOrbit(w, h);
-
-    var Star = function(ctx, w, h) {
-        this.ctx = ctx;
-        this.orbitRadius = randomInt(0, maxOrbitRadius);
-        this.radius = randomInt(60, this.orbitRadius) / 12;
-        this.orbitX = w / 2;
-        this.orbitY = h / 2;
-        this.timePassed = randomInt(0, maxStars);
-        this.speed = randomInt(0, this.orbitRadius) / 900000;
-        this.alpha = randomInt(2, 10) / 10;
-    }
-
-    Star.prototype.draw = function() {
-        var x = Math.sin(this.timePassed) * this.orbitRadius + this.orbitX,
-            y = Math.cos(this.timePassed) * this.orbitRadius + this.orbitY,
-            twinkle = randomInt(0, 10);
-
-        if (twinkle === 1 && this.alpha > 0) {
-            this.alpha -= 0.05;
-        } 
-        else if (twinkle === 2 && this.alpha < 1) {
-            this.alpha += 0.05;
-        }
-
-        this.ctx.globalAlpha = this.alpha;
-        this.ctx.drawImage(game.getCanvas('starCanvas'), x - this.radius / 2, y - this.radius / 2, this.radius, this.radius);
-        this.timePassed += this.speed;
-    }
-
     for (var i = 0; i < maxStars; i++) {
-        stars.push(new Star(gameContext, w, h));
+        stars.push(new Star(w, h, maxOrbitRadius, maxStars));
     }
 
     return function(){
-        gameContext.save();
-        gameContext.globalCompositeOperation = 'source-over';
-        gameContext.globalAlpha = 0.8;
-        gameContext.fillStyle = 'hsla(' + hue + ', 64%, 6%, 1)';
-        gameContext.fillRect(0, 0, w, h);
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = 'hsla(' + hue + ', 64%, 6%, 1)';
+        ctx.fillRect(0, 0, w, h);
 
-        gameContext.globalCompositeOperation = 'lighter';
+        ctx.globalCompositeOperation = 'lighter';
         for (var i = 1, l = stars.length; i < l; i++) {
-            stars[i].draw();
+            stars[i].draw(ctx, game.getCanvas('starCanvas'));
         };
-        gameContext.restore();
+        ctx.restore();
     }
-})(document, game, CONSTANT);
+})(game, CONSTANT);
+
+function Star(w, h, maxOrbitRadius, maxStars) {
+    this.orbitRadius = randomInt(0, maxOrbitRadius);
+    this.radius = randomInt(60, this.orbitRadius) / 12;
+    this.orbitX = w / 2;
+    this.orbitY = h / 2;
+    this.timePassed = randomInt(0, maxStars);
+    this.speed = randomInt(0, this.orbitRadius) / 900000;
+    this.alpha = randomInt(2, 10) / 10;
+}
+Star.prototype.draw = function(ctx, starImg) {
+    var x = Math.sin(this.timePassed) * this.orbitRadius + this.orbitX,
+        y = Math.cos(this.timePassed) * this.orbitRadius + this.orbitY,
+        twinkle = randomInt(0, 10);
+
+    if (twinkle === 1 && this.alpha > 0) {
+        this.alpha -= 0.05;
+    } 
+    else if (twinkle === 2 && this.alpha < 1) {
+        this.alpha += 0.05;
+    }
+
+    ctx.globalAlpha = this.alpha;
+    ctx.drawImage(starImg, x - this.radius / 2, y - this.radius / 2, this.radius, this.radius);
+    this.timePassed += this.speed;
+}
+
+function Fire( sx, sy, tx, ty ) {
+    this.left = sx;
+    this.top = sy;
+
+    this.start_x = sx;
+    this.start_y = sy;
+
+    this.target_x = tx;
+    this.target_y = ty;
+
+    this.isEnd = false;
+    // track the past coordinates of each firework to create a trail effect, increase the coordinate count to create more prominent trails
+    this.coordinates = [];
+    this.coordinateCount = 3;
+    // populate initial coordinate collection with the current coordinates
+    while( this.coordinateCount-- ) {
+        this.coordinates.push( [ this.left, this.top ] );
+    }
+    this.angle = Math.atan2( ty - sy, tx - sx );
+    this.speed = 2;
+    this.acceleration = 1.05;
+    this.brightness = randomInt( 50, 70 );
+    // circle target indicator radius
+    this.targetRadius = 1;
+}
+Fire.prototype.end = function(){
+    if(this.angle < 0){
+        if(this.top <= this.target_y){
+            this.isEnd = true;
+        }
+    }
+    else{
+        if(this.top >= this.target_y){
+            this.isEnd = true;
+        }
+    }
+    
+    return this.isEnd;
+}
+Fire.prototype.hit = function(left, top){
+    if((Math.abs(this.left - left) <= CONSTANT.SPACESHIPSIZE) && (Math.abs(this.top - top) <= CONSTANT.SPACESHIPSIZE)){
+        return true;
+    }
+    return false;
+}
+Fire.prototype.update = function() {
+    this.coordinates.pop();
+    this.coordinates.unshift( [ this.left, this.top ] );
+
+    if( this.targetRadius < 8 ) {
+        this.targetRadius += 0.3;
+    } else {
+        this.targetRadius = 1;
+    }
+    this.speed *= this.acceleration;
+    var vx = Math.cos( this.angle ) * this.speed,
+        vy = Math.sin( this.angle ) * this.speed;
+
+    this.left += vx;
+    this.top += vy;
+
+}
+Fire.prototype.draw = function(ctx) {
+    ctx.beginPath();
+    ctx.moveTo( this.coordinates[ this.coordinates.length - 1][ 0 ], this.coordinates[ this.coordinates.length - 1][ 1 ] );
+    ctx.lineTo( this.left, this.top );
+    ctx.strokeStyle = 'hsl(' + CONSTANT.FIRE_HUE + ', 100%, ' + this.brightness + '%)';
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.arc( this.target_x, this.target_y, this.targetRadius, 0, Math.PI * 2 );
+    ctx.stroke();
+}
 
 function windowToCanvas(canvas, e) {
    var x = e.x || e.clientX,
@@ -497,4 +605,9 @@ function windowToCanvas(canvas, e) {
    return { x: x - bbox.left * (canvas.width  / bbox.width),
             y: y - bbox.top  * (canvas.height / bbox.height)
           };
+}
+function maxOrbit(x, y) {
+    var max = Math.max(x, y),
+        diameter = Math.round(Math.sqrt(max * max * 2));
+    return diameter / 2;
 }

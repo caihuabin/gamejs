@@ -35,9 +35,9 @@ io.on('connection', function(client){
   });
 
   client.on('disconnect', function () {
-    if(client.game && client.game.id) {
-      console.log('\t socket.io:: client disconnected ' + client.userid + ' ' + client.game.id);
-      game.endGame(client.game.id, client.userid);
+    if(client.gameid) {
+      console.log('\t socket.io:: client disconnected ' + client.userid + ' ' + client.gameid);
+      game.endGame(client);
     }
   });
 });
