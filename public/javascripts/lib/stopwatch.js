@@ -1,12 +1,3 @@
-// Stopwatch..................................................................
-//
-// Like the real thing, you can start and stop a stopwatch, and you can
-// find out the elapsed time the stopwatch has been running. After you stop
-// a stopwatch, it's getElapsedTime() method returns the elapsed time
-// between the start and stop.
-//
-// Stopwatches are used primarily for timing animations.
-
 var Stopwatch = function ()  {
 };
 

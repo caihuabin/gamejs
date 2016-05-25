@@ -5,8 +5,13 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
+var session = require('express-session');
+var RedisStore = require('connect-redis')(session);
+var config = require('./config');
+
 var index = require('./routes/index');
 var users = require('./routes/users');
+var games = require('./routes/games');
 
 var app = express();
 
@@ -22,8 +27,19 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(session({
+  resave: false, // don't save session if unmodified
+  saveUninitialized: false, // don't create session until something stored
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000
+  },
+  secret: config.cookieSecret,
+  store: new RedisStore({host: config.RedisHost, port: config.RedisPort, pass:config.RedisPass, db:2, prefix:'sess'})
+}));
+
 app.use('/', index);
 app.use('/users', users);
+app.use('/games', games);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -39,9 +55,13 @@ app.use(function(req, res, next) {
 if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
     res.status(err.status || 500);
-    res.render('error', {
+    /*res.render('error', {
       message: err.message,
       error: err
+    });*/
+    res.json({
+      status: 'fail',
+      error: err.message
     });
   });
 }

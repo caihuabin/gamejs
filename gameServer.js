@@ -71,8 +71,9 @@ var GamePlayer = function( client ) {
 };
 
 GameServer.prototype = {
-    addPlayer: function(client){
+    addPlayer: function(client, data){
         var player = null;
+
         if(this.check_available()){
             player = new GamePlayer(client);
             this.players.push(player);
@@ -90,10 +91,13 @@ GameServer.prototype = {
     },
     removePlayer: function(client){
         var len = this.players.length;
+        var the_remove = null;
 
         for(var i = 0; i < len; i++){
             if(this.players[i].client.userid === client.userid){
-                this.players.splice(i, 1);
+
+                the_remove = this.players.splice(i, 1)[0];
+
                 delete this.laststate[client.userid];
                 this.players.forEach(function(item){
                     item.client.send('s#e#' + JSON.stringify({id: client.userid}) );
@@ -101,6 +105,7 @@ GameServer.prototype = {
                 break;
             }
         }
+        return the_remove;
     },
     check_available: function(){
         return this.players.length < this.player_limit;
@@ -119,7 +124,7 @@ GameServer.prototype = {
         });
     },
     start: function(t) {
-        this.startTime = new Date(); // Record game's startTime (used for pausing)
+        this.startTime = +new Date(); // Record game's startTime (used for pausing)
         this.active = true;
 
         this.updateid = requestAnimationFrame( this.update.bind(this) );
@@ -215,7 +220,7 @@ GameServer.prototype = {
                         ++y_dir;
                         break;
                     case 'M':
-                        player.fires.push([player.pos.x, player.pos.y, item.data.x, item.data.y]);
+                        player.fires.push(item.data);
                         break;
                     case 'A':
                         heading = item.data;
@@ -253,7 +258,7 @@ GameServer.prototype = {
         }
     },
     togglePaused: function () {
-      var now = new Date();
+      var now = +new Date();
 
       this.paused = !this.paused;
 
@@ -270,7 +275,7 @@ GameServer.prototype = {
     },
     tick: function (time) {
         this.updateFrameRate(time);
-        this.gameTime = new Date() - this.startTime;
+        this.gameTime = +new Date() - this.startTime;
     },
     updateFrameRate: function (time) {
         if (this.lastTime === 0) this.fps = this.STARTING_FPS;

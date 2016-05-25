@@ -1,11 +1,9 @@
 var GameClient = function(){
-    
     this.players = {self: null, other: []};
-
+    this.server_updates = [];
     this.create_configuration();
-    if(String(window.location).indexOf('debug') != -1) {
-        this.create_debug_gui();
-    }
+    this.create_timer();
+    
     return this;
 }
 
@@ -26,16 +24,6 @@ GameClient.prototype = {
     },
     connect: function(){
         this.socket.on('connect', this.onConnect.bind(this));
-        this.socket.on('disconnect', this.onDisconnect.bind(this));
-        this.socket.on('message', this.onMessage.bind(this));
-        this.socket.on('error', this.onDisconnect.bind(this));
-        if(true){
-            this.socket.on('oninput', this.onInput.bind(this));
-        }
-        else{
-            this.socket.on('onserverupdate', this.onServerUpdate.bind(this));
-        }
-        this.socket.on('onconnected', this.onConnected.bind(this));
     },
     create_ping_timer: function() {
             //Set a ping timer to 1 second, to maintain the ping/latency between
@@ -89,40 +77,85 @@ GameClient.prototype = {
         }
     },
     onInput: function(data){
-
+        if(!this.client_predict) return;
         var player = this.getPlayer(data.userid);
         if(Array.isArray(data.message) ){
             player.sprite.inputs = player.sprite.inputs.concat(data.message);
         }
     },
     onServerUpdate: function(data){
+
             //Store the server time (this is offset by the latency in the network, by the time we get it)
         this.server_time = data.time;
-            //Update our local offset time from the last server update
         this.client_time = this.server_time - (this.net_offset/1000);
-            //set the position directly as the server tells you.
+
+        if(this.client_predict) return;
+
+        this.server_updates.push(data);
+        if(this.server_updates.length >= ( 10*this.buffer_size )) {
+            this.server_updates.splice(0,1);
+        }
+        
+        var server_updates_length = this.server_updates.length;
+        var previous_state = last_state = null;
+
+        if(server_updates_length > 1){
+            previous_state = this.server_updates[server_updates_length - 2];
+            last_state = this.server_updates[server_updates_length - 1];
+        }
+        else{
+            previous_state = last_state = this.server_updates[0];
+        }
+        
         var player = null,
             sprite = null,
-            item = null;
-        
-        for(var key in data){
-            if(!data.hasOwnProperty(key)) continue;
+            previous_item = null,
+            last_item = null,
+            pos = null;
+
+        var smooth = Number(this.net_offset/(last_state.time - previous_state.time)).toFixed(3);
+
+        for(var key in last_state){
+            if(!last_state.hasOwnProperty(key)) continue;
+
             player = this.getPlayer(key);
-            item = data[key];
+
+            last_item = last_state[key];
+            previous_item = previous_state[key];
             if(player == null) continue;
+
             sprite = player.sprite;
-            if(item.seq <= sprite.last_input_seq) continue;
-            sprite.top = item.pos.y;
-            sprite.left = item.pos.x;
-            sprite.heading = item.heading;
-            item.fires.forEach(function(fire){
+            if(last_item.seq <= sprite.last_input_seq) continue;
+
+            if(this.client_smoothing && previous_item) {
+                pos = Interpolation.v_lerp({x: sprite.left, y: sprite.top}, Interpolation.v_lerp(previous_item.pos, last_item.pos, smooth), smooth );
+                sprite.top = pos.y;
+                sprite.left = pos.x;
+            }
+            else{
+                sprite.top = last_item.pos.y;
+                sprite.left = last_item.pos.x;
+            }
+            sprite.heading = last_item.heading;
+            last_item.fires.forEach(function(fire){
                 sprite.fires.push(new Fire(fire[0], fire[1], fire[2], fire[3]));
             });
-            
+            sprite.last_input_seq = last_item.seq;
         }
     },
     onConnect: function(){
+        this.socket.on('disconnect', this.onDisconnect.bind(this));
+        this.socket.on('message', this.onMessage.bind(this));
+        this.socket.on('error', this.onDisconnect.bind(this));
+        this.socket.on('oninput', this.onInput.bind(this));
+        this.socket.on('onserverupdate', this.onServerUpdate.bind(this));
+        this.socket.on('onconnected', this.onConnected.bind(this));
+        //socket.emit('my other event', { my: 'data' });
 
+        this.create_ping_timer();
+        if(String(window.location).indexOf('debug') != -1) {
+            this.create_debug_gui();
+        }
     },
     onConnected: function(data) {
         var self_sprite = createSprite('self_sprite', spaceShipPainter, [handle_input, process_input, check_collision], {});
@@ -140,8 +173,6 @@ GameClient.prototype = {
     onReadyGameMessage: function(data) {
 
         var server_time = parseFloat(data);
-        this.local_time = server_time + this.net_latency;
-        console.log('server time is about ' + this.local_time);
 
         this.players.info_color = '#2288cc';
         this.players.self.state = 'YOU ' + this.players.self.state;
@@ -161,7 +192,6 @@ GameClient.prototype = {
     },
     onCreateGameMessage: function(data) {
         var server_time = parseFloat(data);
-        this.local_time = server_time + this.net_latency;
         this.players.self.info_color = '#cc0000';
     },
     onOtherPlayerDisconnect: function(data){
@@ -207,18 +237,12 @@ GameClient.prototype = {
         return null;
     },
     create_configuration: function() {
-        this._pdt = 0.0001;                 //The physics update delta time
-        this._pdte = new Date().getTime();  //The physics update last delta time
+        this.color = 'rgb(25,125,255)',
             //A local timer for precision on server and client
         this.local_time = 0.016;            //The local timer
-        this._dt = new Date().getTime();    //The local timer delta
-        this._dte = new Date().getTime();   //The local timer last frame time
 
         this.show_help = false;             //Whether or not to draw the help text
-        this.naive_approach = false;        //Whether or not to use the naive approach
-        this.show_server_pos = false;       //Whether or not to show the server position
-        this.show_dest_pos = false;         //Whether or not to show the interpolation goal
-        this.client_predict = true;         //Whether or not the client is predicting input
+        this.client_predict = false;         //Whether or not the client is predicting input
         this.input_seq = 0;                 //When predicting client inputs, we store the last input as a sequence number
         this.client_smoothing = true;       //Whether or not the client side prediction tries to smooth things out
         this.client_smooth = 25;            //amount of smoothing to apply to client update dest
@@ -227,22 +251,12 @@ GameClient.prototype = {
         this.net_ping = 0.001;              //The round trip time from here to the server,and back
         this.last_ping_time = 0.001;        //The time we last sent a ping
         this.fake_lag = 0;                //If we are simulating lag, this applies only to the input client (not others)
-        this.fake_lag_time = 0;
 
         this.net_offset = 100;              //100 ms latency between server and client interpolation for other clients
         this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.
-        this.target_time = 0.01;            //the time where we want to be in the server timeline
-        this.oldest_tick = 0.01;            //the last time tick we have available in the buffer
 
         this.client_time = 0.01;            //Our local 'clock' based on server time - client interpolation(net_offset).
         this.server_time = 0.01;            //The time the server reported it was at, last we heard from it
-        this.dt = 0.016;                    //The time that the last frame took to run
-        this.fps = 0;                       //The current instantaneous fps (1/this.dt)
-        this.fps_avg_count = 0;             //The number of samples we have taken for fps_avg
-        this.fps_avg = 0;                   //The current average fps displayed in the debug UI
-        this.fps_avg_acc = 0;               //The accumulation of the last avgcount fps samples
-        this.lit = 0;
-        this.llt = new Date().getTime();
     },
     create_debug_gui: function() {
         this.gui = new dat.GUI();
@@ -251,52 +265,66 @@ GameClient.prototype = {
                 //We want to know when we change our color so we can tell
                 //the server to tell the other clients for us
             this.colorcontrol.onChange(function(value) {
-                this.players.self.color = value;
+                this.players.self.sprite.color = value;
                 localStorage.setItem('color', value);
-                this.socket.send('c#' + value);
+                this.socket.send('c#' + colorToRGB(value));
             }.bind(this));
-
             _playersettings.open();
+            
         var _othersettings = this.gui.addFolder('Methods');
-            _othersettings.add(this, 'naive_approach').listen();
-            _othersettings.add(this, 'client_smoothing').listen();
-            _othersettings.add(this, 'client_smooth').listen();
-            _othersettings.add(this, 'client_predict').listen();
+            _othersettings.add(this, 'client_smoothing').name('动作平滑').listen();
+            _othersettings.add(this, 'client_smooth').name('平滑度').listen();
+            _othersettings.add(this, 'client_predict').name('动作预测').listen();
+            _othersettings.open();
+
         var _debugsettings = this.gui.addFolder('Debug view');
-        
-            _debugsettings.add(this, 'show_help').listen();
-            _debugsettings.add(this, 'fps_avg').listen();
-            _debugsettings.add(this, 'show_server_pos').listen();
-            _debugsettings.add(this, 'show_dest_pos').listen();
-            _debugsettings.add(this, 'local_time').listen();
+            var show_help = _debugsettings.add(this, 'show_help').name('帮助').listen();
+            show_help.onChange(function(){
+                if(this.show_help){
+                    game.startAnimate = function (ctx, time) {
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(255,255,255,1)';
+                        ctx.fillText('net_offset : local offset of others players and their server updates. Players are net_offset "in the past" so we can smoothly draw them interpolated.', 10 , 30);
+                        ctx.fillText('server_time : last known game time on server', 10 , 70);
+                        ctx.fillText('client_time : delayed game time on client for other players only (includes the net_offset)', 10 , 90);
+                        ctx.fillText('net_latency : Time from you to the server. ', 10 , 130);
+                        ctx.fillText('net_ping : Time from you to the server and back. ', 10 , 150);
+                        ctx.fillText('fake_lag : Add fake ping/lag for testing, applies only to your inputs (watch server_pos block!). ', 10 , 170);
+                        ctx.fillText('client_smoothing/client_smooth : When updating players information from the server, it can smooth them out.', 10 , 210);
+                        ctx.fillText(' This only applies to other clients when prediction is enabled, and applies to local player with no prediction.', 170 , 230);
+                        ctx.restore();
+                    };
+                }
+                else{
+                    game.startAnimate = function (ctx, time) {};
+                }
+            }.bind(this) );
+
+            _debugsettings.add(this, 'local_time').name('本地时间').listen();
             _debugsettings.open();
+
         var _consettings = this.gui.addFolder('Connection');
-            _consettings.add(this, 'net_latency').step(0.001).listen();
-            _consettings.add(this, 'net_ping').step(0.001).listen();
+            _consettings.add(this, 'net_latency').name('延迟').step(0.001).listen();
+            _consettings.add(this, 'net_ping').name('ping延迟').step(0.001).listen();
                 //When adding fake lag, we need to tell the server about it.
-            var lag_control = _consettings.add(this, 'fake_lag').step(0.001).listen();
+            var lag_control = _consettings.add(this, 'fake_lag').name('延迟模拟').step(0.001).listen();
             lag_control.onChange(function(value){
                 this.socket.send('l#' + value);
             }.bind(this));
             _consettings.open();
-        var _netsettings = this.gui.addFolder('Networking');
-            
-            _netsettings.add(this, 'net_offset').min(0.01).step(0.001).listen();
-            _netsettings.add(this, 'server_time').step(0.001).listen();
-            _netsettings.add(this, 'client_time').step(0.001).listen();
-            //_netsettings.add(this, 'oldest_tick').step(0.001).listen();
-            _netsettings.open();
 
+        var _netsettings = this.gui.addFolder('Networking');
+            _netsettings.add(this, 'net_offset').name('网络时差').min(0.01).step(0.001).listen();
+            _netsettings.add(this, 'server_time').name('服务器时间').step(0.001).listen();
+            _netsettings.add(this, 'client_time').name('客户端时间').step(0.001).listen();
+            _netsettings.open();
     },
     create_timer: function(){
         setInterval(function(){
-            this._dt = new Date().getTime() - this._dte;
-            this._dte = new Date().getTime();
-            this.local_time += this._dt/1000.0;
-        }.bind(this), 4);
+            this.local_time = game.gameTime;
+        }.bind(this), 100);
     }
 }
-
 
 function createSprite(name, painter, update, opts){
     var sprite = new Sprite(name, painter, update);

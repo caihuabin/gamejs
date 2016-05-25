@@ -1,10 +1,10 @@
 var UUID        = require('node-uuid');
 var GameServer = require('./gameServer.js');
+var redisClient = require('./util/redisClient');
 
 var Game = {
     games: {},
     game_count: 0,
-    //a local queue of messages we delay if faking latency
     fake_latency: 0,
     messages: [],
     onMessage: function(client, message) {
@@ -63,8 +63,18 @@ var Game = {
         this.game_count++;
         this.startGame(thegame);
 
+        /*var cache_key = client.auth_key;
+        redisClient.getItem(cache_key, function (err, data) {
+            if (err) {
+                console.log('error:' + err.message);
+            }
+            else{
+                
+            }
+        });*/
+        var data = null;
         try{
-            thegame.addPlayer(client);
+            thegame.addPlayer(client, data);
             client.gameid = thegame.gameid;
             console.log('server host at:  ' + thegame.server_time);
             console.log('player: ' + client.userid + ' created a game with id: ' + client.gameid);
@@ -98,17 +108,24 @@ var Game = {
     },
     endGame: function(client) {
         var thegame = this.getGame(client.gameid);
+        var cache_key = client.auth_key;
         if(thegame) {
-            if(thegame.players.length > 1) {
-                thegame.removePlayer(client);
-                client.gameid = null;
-            }
-            else{
+            var player = thegame.removePlayer(client);
+            client.gameid = null;
+            if(thegame.players.length < 1) {
                 delete this.games[thegame.gameid];
                 this.game_count--;
                 console.log('game removed. there are now ' + this.game_count + ' games' );
             }
-            
+            //delete player.client;
+            /*redisClient.setItem(cache_key, player, redisClient.defaultExpired, function (err) {
+                if (err) {
+                    console.log('error:' + err.message);
+                }
+                else{
+                    
+                }
+            });*/
         } 
         else {
             console.log('that game was not found!');

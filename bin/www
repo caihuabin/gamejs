@@ -26,6 +26,11 @@ var io = require('socket.io')(server);
 io.on('connection', function(client){
   client.userid = UUID();
   client.emit('onconnected', { id: client.userid } );
+
+  /*client.on('my other event', function (data) {
+    console.log(data);
+  });*/
+  
   game.findGame(client);
 
   console.log('\t socket.io:: player ' + client.userid + ' connected');

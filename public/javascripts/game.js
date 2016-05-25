@@ -105,7 +105,7 @@ var handle_input = {
         }
         if (!!sprite.input.mouse)
         {
-            sprite.inputs.push({input: 'M', data: sprite.input.mouse, seq: ++sprite.input_seq, time: time});
+            sprite.inputs.push({input: 'M', data: [sprite.left, sprite.top, sprite.input.mouse.x, sprite.input.mouse.y], seq: ++sprite.input_seq, time: time});
             sprite.input.mouse = null;
         }
         if(sprite.input.score){
@@ -154,7 +154,7 @@ var process_input = {
                         ++y_dir;
                         break;
                     case 'M':
-                        sprite.fires.push(new Fire(sprite.left, sprite.top, item.data.x, item.data.y));
+                        sprite.fires.push(new Fire(item.data[0], item.data[1], item.data[2], item.data[3]) );
                         break;
                     case 'A':
                         sprite.painter.thrust(item.data);
@@ -207,7 +207,7 @@ game.addSprite(self_sprite);*/
 
 // Game Paint Methods.........................................
    
-game.startAnimate = function () {
+game.startAnimate = function (ctx, time) {
    
 };
 game.paintOverSprites = function () {
@@ -456,7 +456,7 @@ interval = setInterval( function (e) {
         progressDiv.style.display = 'none';
         overlayDiv.style.display = 'none';
 
-        game.playSound('manAtWar');
+        //game.playSound('manAtWar');
         game_client.start();
         //game.start();
     }
@@ -595,19 +595,4 @@ Fire.prototype.draw = function(ctx) {
     ctx.beginPath();
     ctx.arc( this.target_x, this.target_y, this.targetRadius, 0, Math.PI * 2 );
     ctx.stroke();
-}
-
-function windowToCanvas(canvas, e) {
-   var x = e.x || e.clientX,
-       y = e.y || e.clientY,
-       bbox = canvas.getBoundingClientRect();
-
-   return { x: x - bbox.left * (canvas.width  / bbox.width),
-            y: y - bbox.top  * (canvas.height / bbox.height)
-          };
-}
-function maxOrbit(x, y) {
-    var max = Math.max(x, y),
-        diameter = Math.round(Math.sqrt(max * max * 2));
-    return diameter / 2;
 }
