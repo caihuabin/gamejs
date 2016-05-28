@@ -384,6 +384,11 @@ game.paintOverSprites = function () {
     });
 
     ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.fillText('Score : ' + self_sprite.score, 1200, 650);
+    ctx.restore();
 };
    
 game.paintUnderSprites = function () {

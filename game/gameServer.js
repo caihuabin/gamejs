@@ -45,7 +45,7 @@ var GameServer = function(gameid, limit){
     this.laststate = {};
 };
 
-var GamePlayer = function( client ) {
+var GamePlayer = function(client, data) {
     this.client = client;
 
     this.width = 64;
@@ -68,6 +68,7 @@ var GamePlayer = function( client ) {
         y_max: 705 - this.height/2
     };
     this.heading = Math.PI/2;
+    this.score = data ? data.score : 0;
 };
 
 GameServer.prototype = {
@@ -75,14 +76,14 @@ GameServer.prototype = {
         var player = null;
 
         if(this.check_available()){
-            player = new GamePlayer(client);
+            player = new GamePlayer(client, data);
             this.players.push(player);
             client.send('s#h#'+ String(this.server_time));
             
             var other_players = this.getOtherPlayers(client.userid);
             other_players.forEach(function(item){
-                item.client.send('s#j#' + JSON.stringify({id: client.userid, pos: player.pos, heading: player.heading}));
-                client.send('s#j#' + JSON.stringify({id: item.client.userid, pos: item.pos, heading: item.heading}));
+                item.client.send('s#j#' + JSON.stringify({id: client.userid, pos: player.pos, heading: player.heading, score: player.score}));
+                client.send('s#j#' + JSON.stringify({id: item.client.userid, pos: item.pos, heading: item.heading, score: item.score}));
             });
         }
         else{
@@ -225,6 +226,8 @@ GameServer.prototype = {
                     case 'A':
                         heading = item.data;
                         break;
+                    case '+':
+                        ++player.score;
                     default :
                         break;
                 }
