@@ -335,6 +335,7 @@ function createSprite(name, painter, update, opts){
     sprite.top = opts.top || CONSTANT.WORLD_HEIGHT - sprite.height/2;
     sprite.left = opts.left || sprite.width/2;
     sprite.heading = opts.heading || Math.PI/2;
+    sprite.score = opts.score || 0;
     sprite.velocityX = sprite.velocityY = 500; // pixels/second
 
     sprite.input = {left:false, right:false, up: false, down: false, mouse: null, score: false, damage: false};

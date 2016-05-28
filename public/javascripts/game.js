@@ -161,6 +161,9 @@ var process_input = {
                         sprite.painter.thrust(item.data);
                         heading = item.data;
                         break;
+                    case '+':
+                        ++sprite.score;
+                        break;
                     default :
                         break;
                 }
