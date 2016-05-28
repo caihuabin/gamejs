@@ -1,5 +1,13 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  p.header-title GameJs
+  form.login(method='post', action='/users')
+    p
+      label(for='login') Username:
+      input(type='text', name='username', autocomplete='off', tabindex='-1', maxlength='50', autofocus)
+    p
+      label(for='password') Password:
+      input(type='password', name='password', tabindex='-1')
+    p.login-submit
+      button.login-button(type='submit', tabindex='-1')

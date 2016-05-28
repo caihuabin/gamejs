@@ -563,7 +563,7 @@ Game.prototype = {
    },
 
    // Override the following methods as desired:
-
+   initialize: function(){},
    startAnimate:      function (ctx, time) { }, // These methods are called by
    paintUnderSprites: function ()     { }, // animate() in the order they
    paintOverSprites:  function ()     { }, // are listed. Override them

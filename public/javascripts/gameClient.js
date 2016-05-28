@@ -272,9 +272,9 @@ GameClient.prototype = {
             _playersettings.open();
             
         var _othersettings = this.gui.addFolder('Methods');
-            _othersettings.add(this, 'client_smoothing').name('动作平滑').listen();
-            _othersettings.add(this, 'client_smooth').name('平滑度').listen();
-            _othersettings.add(this, 'client_predict').name('动作预测').listen();
+            _othersettings.add(this, 'client_smoothing').name('运动插值').listen();
+            _othersettings.add(this, 'client_smooth').name('插值参数').listen();
+            _othersettings.add(this, 'client_predict').name('预先运动').listen();
             _othersettings.open();
 
         var _debugsettings = this.gui.addFolder('Debug view');

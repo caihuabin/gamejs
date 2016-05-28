@@ -12,6 +12,8 @@ var CONSTANT = {
     FIRE_HUE: 120,
 };
 var game = new Game('game', 'viewport');
+  game.context.canvas.width = window.innerWidth;
+  game.context.canvas.height = window.innerHeight;
 
 var game_client = new GameClient();
 
@@ -25,8 +27,6 @@ progressbar = new COREHTML5.Progressbar('rgba(0,0,0,0.5)', 'rgba(100, 130, 250,1
 progressbar.appendTo(progressDiv);
 
 // 
-game.context.canvas.width = window.innerWidth;
-game.context.canvas.height = window.innerHeight;
 
 var spaceShipPainter = {
     engineThrust: false,
@@ -155,6 +155,7 @@ var process_input = {
                         break;
                     case 'M':
                         sprite.fires.push(new Fire(item.data[0], item.data[1], item.data[2], item.data[3]) );
+                        game.playSound('shoot2');
                         break;
                     case 'A':
                         sprite.painter.thrust(item.data);
@@ -202,8 +203,144 @@ var check_collision = {
     }
 };
 
-/*var self_sprite = createSprite('self_sprite', spaceShipPainter, [handle_input, process_input, check_collision]);
-game.addSprite(self_sprite);*/
+game.initialize = function(){
+  var self = this;
+
+  // Key Listeners..............................................
+
+  self.addKeyListener(
+     {
+        key: 'p',
+        listener: function () {
+           self.togglePaused();
+        }
+     }
+  );
+
+  self.addKeyListener(
+     {
+        key: 'right arrow',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.right = true;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+              
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'right arrow up',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.right = false;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+              
+           }
+        }
+     }
+  );
+
+  self.addKeyListener(
+     {
+        key: 'left arrow',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.left = true;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'left arrow up',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.left = false;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'up arrow',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.up = true;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'up arrow up',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.up = false;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'down arrow',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.down = true;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+  self.addKeyListener(
+     {
+        key: 'down arrow up',
+        listener: function () {
+          var self_sprite = self.getSprite('self_sprite');
+          self_sprite.input.down = false;
+           var now = +new Date();
+           if (now - lastKeyListenerTime > 200) { // throttle
+              lastKeyListenerTime = now;
+           }
+        }
+     }
+  );
+
+  self.addMouseListener(
+      {
+          key: 'mouseclick',
+          listener: function (canvas, e) {
+              var pos = windowToCanvas(canvas, e);
+              var now = +new Date();
+              var self_sprite = self.getSprite('self_sprite');
+              self_sprite.input.mouse = pos;
+              if (now - lastKeyListenerTime > 200) { // throttle
+                  lastKeyListenerTime = now;
+              }
+          }
+      }
+  );
+
+};
 
 // Game Paint Methods.........................................
    
@@ -249,139 +386,6 @@ game.paintOverSprites = function () {
 game.paintUnderSprites = function () {
     paintSpace();
 };
-// Key Listeners..............................................
-
-game.addKeyListener(
-   {
-      key: 'p',
-      listener: function () {
-         game.togglePaused();
-      }
-   }
-);
-
-game.addKeyListener(
-   {
-      key: 'right arrow',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.right = true;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-            
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'right arrow up',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.right = false;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-            
-         }
-      }
-   }
-);
-
-game.addKeyListener(
-   {
-      key: 'left arrow',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.left = true;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'left arrow up',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.left = false;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'up arrow',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.up = true;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'up arrow up',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.up = false;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'down arrow',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.down = true;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-game.addKeyListener(
-   {
-      key: 'down arrow up',
-      listener: function () {
-        var self_sprite = game.getSprite('self_sprite');
-        self_sprite.input.down = false;
-         var now = +new Date();
-         if (now - lastKeyListenerTime > 200) { // throttle
-            lastKeyListenerTime = now;
-         }
-      }
-   }
-);
-
-game.addMouseListener(
-    {
-        key: 'mouseclick',
-        listener: function (canvas, e) {
-            var pos = windowToCanvas(canvas, e);
-            var now = +new Date();
-            var self_sprite = game.getSprite('self_sprite');
-            self_sprite.input.mouse = pos;
-            if (now - lastKeyListenerTime > 200) { // throttle
-                lastKeyListenerTime = now;
-            }
-        }
-    }
-);
 
 // Initialization.............................................
 
@@ -457,6 +461,7 @@ interval = setInterval( function (e) {
         overlayDiv.style.display = 'none';
 
         //game.playSound('manAtWar');
+        game.initialize();
         game_client.start();
         //game.start();
     }

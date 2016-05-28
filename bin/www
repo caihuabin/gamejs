@@ -5,10 +5,9 @@
  */
 
 var app = require('../app');
-var game = require('../game');
+var socket = require('../socket');
 var debug = require('debug')('gamejs:server');
 var http = require('http');
-var UUID = require('node-uuid');
 
 /**
  * Get port from environment and store in Express.
@@ -22,30 +21,7 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
-var io = require('socket.io')(server);
-io.on('connection', function(client){
-  client.userid = UUID();
-  client.emit('onconnected', { id: client.userid } );
-
-  /*client.on('my other event', function (data) {
-    console.log(data);
-  });*/
-  
-  game.findGame(client);
-
-  console.log('\t socket.io:: player ' + client.userid + ' connected');
-
-  client.on('message', function(m) {
-    game.onMessage(client, m);
-  });
-
-  client.on('disconnect', function () {
-    if(client.gameid) {
-      console.log('\t socket.io:: client disconnected ' + client.userid + ' ' + client.gameid);
-      game.endGame(client);
-    }
-  });
-});
+socket(server);
 
 /**
  * Listen on provided port, on all network interfaces.

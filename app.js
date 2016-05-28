@@ -6,7 +6,8 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
 var session = require('express-session');
-var RedisStore = require('connect-redis')(session);
+var redisSessionStore = require('./util/redis-session-store');
+
 var config = require('./config');
 
 var index = require('./routes/index');
@@ -28,13 +29,14 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
+  name: 'connect.sid',
   resave: false, // don't save session if unmodified
   saveUninitialized: false, // don't create session until something stored
   cookie: {
     maxAge: 24 * 60 * 60 * 1000
   },
   secret: config.cookieSecret,
-  store: new RedisStore({host: config.RedisHost, port: config.RedisPort, pass:config.RedisPass, db:2, prefix:'sess'})
+  store: redisSessionStore
 }));
 
 app.use('/', index);
