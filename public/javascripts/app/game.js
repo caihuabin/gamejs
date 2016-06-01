@@ -26,9 +26,9 @@ define(function(require, exports, module){
 
     // Initialization.............................................
 
-    self.queueImage('/images/image1.png');
-    self.queueImage('/images/image2.png');
-    self.queueImage('/images/image3.png');
+    self.queueImage('/images/image1.jpg');
+    self.queueImage('/images/image2.jpg');
+    self.queueImage('/images/image3.jpg');
 
     self.queueCanvasFun(StarCanvas);
     self.queueCanvasFun(SpaceShipCanvas);
