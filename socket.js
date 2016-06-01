@@ -28,13 +28,15 @@ var socket = function(server){
 
 	io.on('connection', function(client){
 	  	client.userid = UUID();
+	  	client.status = 'connected';
+
 	  	client.emit('onconnected', { id: client.userid } );
 		console.log('\t socket.io:: player ' + client.userid + ' connected');
 	  	/*client.on('my other event', function (data) {
 	    	console.log(data);
 	  	});*/
 	  	
-	  	game.findGame(client);
+	  	//game.findGame(client);
 
 	  	client.on('message', function(m) {
 	    	game.onMessage(client, m);

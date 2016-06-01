@@ -7,5 +7,6 @@ module.exports = {
   	"RedisPass": "cccccc",
   	"CacheExpired": 86400,
   	"cookieSecret" : "Game.js",
+  	"sessionExpiration": 86400,
   	"salt": "OdwqENkHnCse8JNt3QCCFlrnvRLxZXUP"
 }

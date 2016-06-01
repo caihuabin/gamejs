@@ -1,8 +1,17 @@
 doctype html
 html
   head
-    title= title
+    meta(http-equiv='Content-Type', content='text/html; charset=utf-8')
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge,chrome=1')
+    meta(name='keywords',content='game,real time,multiplayer,javascript,node.js,HTML5,canvas')
+    meta(name='description',content='a multiplayer and real time game using javascript,nodejs,canvas')
+    title= title||'Game.js &ndash; by icyse'
     link(rel='stylesheet', href='/stylesheets/normalize.css')
-    link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='stylesheet', href='/stylesheets/base.css')
+    block stylesheets
+    block require
   body
     block content
+    block javascripts

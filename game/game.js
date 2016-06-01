@@ -7,6 +7,7 @@ var Game = {
     game_count: 0,
     fake_latency: 0,
     messages: [],
+    PLAYER_LIMIT: 3,
     onMessage: function(client, message) {
         if(this.fake_latency && message.split('#')[0].substr(0,1) == 'i') {
                 //store all input message
@@ -25,11 +26,26 @@ var Game = {
         var message_parts = message.split('#');
         var message_type = message_parts[0];
 
-        var thegame = this.getGame(client.gameid);
+        var thegame = null;
         
         switch(message_type){
+            case 'f':
+                if(client.status === 'ongame'){
+                    client.send('s#w#You can not select game again.');
+                }
+                else{
+                    client.status = 'ongame';
+                    if(message_parts[1] === '0'){
+                        this.createGame(client, this.PLAYER_LIMIT);
+                    }
+                    else{
+                        this.findGame(client, message_parts[1]);
+                    }
+                }
+                break;
             case 'i':
             case 'c'://Client changed their color!
+                thegame = this.getGame(client.gameid);
                 thegame.handle_message(client, message);
                 break;
             case 'p':
@@ -44,7 +60,18 @@ var Game = {
     },
 
     getGame: function(gameid){
-        return this.games[gameid];
+        if(this.games.hasOwnProperty(gameid) ){
+            return this.games[gameid];
+        }
+        return null;
+    },
+    getAllGames: function(){
+        var games = [];
+        for(var key in this.games){
+            if(!this.games.hasOwnProperty(key)) continue;
+            games.push(this.games[key]);
+        }
+        return games;
     },
     getAvailableGames: function(){
         var games = [];
@@ -77,6 +104,7 @@ var Game = {
                 }
                 catch(err){
                     console.log('error:' + err.message);
+                    client.send('s#w#' + err.message);
                 }
             }
         });
@@ -86,23 +114,29 @@ var Game = {
     startGame: function(game) {
         game.start(new Date().getTime());
     },
-    findGame: function(client) {
+    findGame: function(client, gameid) {
         console.log('looking for a game. We have : ' + this.game_count);
         if(this.game_count) {
-            var games = this.getAvailableGames();
-            var thegame = games[0];
+            var thegame = this.getGame(gameid);
 
-            if(games.length > 0) {
-                thegame.addPlayer(client);
-                client.gameid = thegame.gameid;
-                console.log('player ' + client.userid + ' joined a game with id ' + client.gameid);
+            if(thegame) {
+                try{
+                    thegame.addPlayer(client, null);
+                    client.gameid = thegame.gameid;
+                    console.log('player ' + client.userid + ' joined a game with id ' + client.gameid);
+                }
+                catch(err){
+                    console.log('error:' + err.message);
+                    this.createGame(client, this.PLAYER_LIMIT);
+                }
             }
             else {
-                this.createGame(client, 3);
+                console.log('the game is removed, create one.');
+                this.createGame(client, this.PLAYER_LIMIT);
             }
         } 
         else {
-            this.createGame(client, 3);
+            this.createGame(client, this.PLAYER_LIMIT);
         }
     },
     endGame: function(client) {

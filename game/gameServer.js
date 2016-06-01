@@ -87,7 +87,7 @@ GameServer.prototype = {
             });
         }
         else{
-            throw (new Error('the game is full'));
+            throw (new Error('the players are full,select another game.'));
         }
     },
     removePlayer: function(client){

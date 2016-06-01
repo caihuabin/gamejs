@@ -1,29 +1,18 @@
-var COREHTML5 = COREHTML5 || {}
+define(['./roundedRectangle'],function (RoundedRectangle) {
+   var Progressbar = function(strokeStyle, fillStyle, horizontalSizePercent, verticalSizePercent) {
+      this.trough = new RoundedRectangle(strokeStyle, fillStyle, horizontalSizePercent, verticalSizePercent);
+      this.SHADOW_COLOR = 'rgba(255,255,255,0.5)';
+      this.SHADOW_BLUR = 3;
+      this.SHADOW_OFFSET_X = 2;
+      this.SHADOW_OFFSET_Y = 2;
 
-// Constructor....................................................
+      this.percentComplete = 0;
+      this.createCanvases();
+      this.createDOMElement();
 
-COREHTML5.Progressbar = function(strokeStyle, fillStyle,
-                                 horizontalSizePercent,
-                                 verticalSizePercent) {
-   this.trough = new COREHTML5.RoundedRectangle(strokeStyle,
-                                                fillStyle,
-                                                horizontalSizePercent,
-                                                verticalSizePercent);
-   this.SHADOW_COLOR = 'rgba(255,255,255,0.5)';
-   this.SHADOW_BLUR = 3;
-   this.SHADOW_OFFSET_X = 2;
-   this.SHADOW_OFFSET_Y = 2;
-
-   this.percentComplete = 0;
-   this.createCanvases();
-   this.createDOMElement();
-
-   return this;
-}
-
-// Prototype......................................................
-
-   COREHTML5.Progressbar.prototype = {
+      return this;
+   };
+   Progressbar.prototype = {
       createDOMElement: function () {
          this.domElement = document.createElement('div');
          this.domElement.appendChild(this.context.canvas);
@@ -37,23 +26,15 @@ COREHTML5.Progressbar = function(strokeStyle, fillStyle,
 
       appendTo: function (element) {
          element.appendChild(this.domElement);
-
-         this.domElement.style.width  =
-            element.offsetWidth  + 'px';
-
-         this.domElement.style.height =
-            element.offsetHeight + 'px';
-
+         this.domElement.style.width  = element.offsetWidth  + 'px';
+         this.domElement.style.height = element.offsetHeight + 'px';
          this.resize(); // obliterates everything in the canvases
-
-         this.trough.resize(element.offsetWidth,
-                            element.offsetHeight);
+         this.trough.resize(element.offsetWidth, element.offsetHeight);
          
          this.trough.draw(this.foreground);
 
          this.trough.setStyles();
          this.trough.draw(this.background);
-         
       },
 
       setCanvasSize: function () {
@@ -109,4 +90,6 @@ COREHTML5.Progressbar = function(strokeStyle, fillStyle,
                                 this.context.canvas.width,
                                 this.context.canvas.height);
       },
-};
+   };
+    return Progressbar;
+});

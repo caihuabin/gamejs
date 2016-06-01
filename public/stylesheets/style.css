@@ -1,18 +1,14 @@
 body {
   font: 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  color: #404040;
+  color: #060e1b;
   line-height: 1;
+  background: #060e1b;
 }
 
 body, .login-submit, .login-submit:before, .login-submit:after {
-  background: rgb(55, 55, 55);
+  background: #060e1b;
 }
-*{
-  box-sizing: border-box;
-}
-ol, ul {
-  list-style: none;
-}
+
 a {
   color: #00a1d2;
   text-decoration: none;
@@ -93,6 +89,7 @@ label {
   border-radius: 32px;
   -webkit-box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+  
 }
 .login-submit:before, .login-submit:after {
   content: '';

@@ -1,40 +1,41 @@
-doctype html
-html(lang='zh-CN')
-  head
-    meta(http-equiv='Content-Type', content='text/html; charset=utf-8')
-    meta(charset='utf-8')
-    meta(name='viewport', content='width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no')
-    meta(http-equiv='X-UA-Compatible', content='IE=edge,chrome=1')
-    meta(name='keywords',content='game,real time,multiplayer,javascript,node.js,HTML5,canvas')
-    meta(name='description',content='a multiplayer and real time game using javascript,nodejs,canvas')
-    title= 'Game.js &ndash; by icyse'
-    link(rel='stylesheet', href='/stylesheets/normalize.css')
-    link(rel='stylesheet', href='/stylesheets/game.css')
-  body
-    a#fork-me(href='https://github.com/icyse/icyse.github.io', target='_blank')
-        img(src='/images/fork-me-on-github.png', alt='Fork me on Github')
-    canvas#viewport Canvas not supported
-    div#overlayDiv.overlay
-        div.overlay-title GameJs
-        div#progressDiv
-            div#progressPercentDiv 0%
-    audio#manAtWar(preload='auto')
-        source(src='/sounds/ManAtArms.mp3', type='audio/mp3')
-        source(src='/sounds/ManAtArms.ogg', type='audio/ogg')
-    audio#shoot2(preload='auto')
-        source(src='/sounds/shoot2.mp3', type='audio/mp3')
-        source(src='/sounds/shoot2.ogg', type='audio/ogg')
-    script(type='text/javascript', src='/socket.io/socket.io.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/dat.gui.min.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/animationFrame.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/mathlib-min.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/k3d-min.js', charset='utf-8')
-
-    script(type='text/javascript', src='/javascripts/lib/roundedRectangle.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/progressbar.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/sprites.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/lib/gameEngine.js', charset='utf-8')
-
-    script(type='text/javascript', src='/javascripts/util.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/gameClient.js', charset='utf-8')
-    script(type='text/javascript', src='/javascripts/game.js', charset='utf-8')
+extends layout
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/game.css')
+  link(rel='stylesheet', href='/stylesheets/button.css')
+  link(rel='stylesheet', href='/stylesheets/rating.min.css')
+block require
+  script(type='text/javascript', src='/javascripts/lib/require.js', charset='utf-8', data-main='/javascripts/app')
+block content
+  a#fork-me(href='https://github.com/icyse/gamejs', target='_blank')
+    img(src='/images/fork-me-on-github.png', alt='Fork me on Github')
+  canvas#viewport Canvas not supported
+  div#overlayDiv.overlay
+    div.header-title GameJs
+    div#selectGamesDiv
+      div.select-title Select Space
+      div.button.black(data-gameid='0')
+        div.shine
+        span.new-game 创建新游戏
+      for item in gameServers
+        - var available = Math.floor(item.player_count/item.player_limit*5)
+        div.button.black(data-gameid='#{item.gameid}')
+          div.shine
+          div.ui.large.rating
+            i(class='icon#{available-- > 0 ? " active" : ""}')
+            i(class='icon#{available-- > 0 ? " active" : ""}')
+            i(class='icon#{available-- > 0 ? " active" : ""}')
+            i(class='icon#{available-- > 0 ? " active" : ""}')
+            i(class='icon#{available-- > 0 ? " active" : ""}')
+    div#progressbar.progressbar
+      span#expand.expand
+  audio#manAtWar(preload='auto')
+    source(src='/sounds/ManAtArms.mp3', type='audio/mp3')
+    source(src='/sounds/ManAtArms.ogg', type='audio/ogg')
+  audio#shoot2(preload='auto')
+    source(src='/sounds/shoot2.mp3', type='audio/mp3')
+    source(src='/sounds/shoot2.ogg', type='audio/ogg')
+block javascripts
+  script(type='text/javascript', src='/javascripts/game/dat.gui.min.js', charset='utf-8')
+  script(type='text/javascript', src='/javascripts/game/mathlib-min.js', charset='utf-8')
+  script(type='text/javascript', src='/javascripts/game/animationFrame.js', charset='utf-8')
+  script(type='text/javascript', src='/javascripts/game/k3d-min.js', charset='utf-8')

@@ -5,7 +5,7 @@ var game = require('../game/game');
 var restrict = require('../util/restrict');
 
 router.get('/', restrict.isAuthenticated, function(req, res, next) {
-  var games = game.getAvailableGames();
+  var games = game.getAllGames();
   var gameServers = [];
   games.forEach(function(item){
     gameServers.push({

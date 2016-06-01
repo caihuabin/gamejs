@@ -1,5 +1,6 @@
 extends layout
-
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/style.css')
 block content
   p.header-title GameJs
   form.login(method='post', action='/users')
