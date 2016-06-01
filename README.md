@@ -11,7 +11,7 @@ If you have a problem or have some good advice? Welcome to star and submit "Pull
 * Express 4
 * Socket.io
 * Mongodb
-* AngularJS
+* Canvas/HTML5
 * Redis
 
 ## Installation
