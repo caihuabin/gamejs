@@ -59,7 +59,7 @@ var GamePlayer = function(client, data) {
 
     this.inputs = [];
     this.last_input_seq = -1;
-    this.fires = [];
+    this.bullets = [];
 
     this.pos_limits = {
         x_min: this.width/2,
@@ -149,12 +149,12 @@ GameServer.prototype = {
 
                 this.laststate[item.client.userid] = {
                     pos: item.pos,
-                    fires: item.fires,
+                    bullets: item.bullets,
                     heading: item.heading,
                     seq: item.last_input_seq
                 };
                 this.laststate['time'] = this.server_time;
-                item.fires = [];
+                item.bullets = [];
             }.bind(this));
             this.players.forEach(function(item){
                 item.client.emit( 'onserverupdate', this.laststate );
@@ -221,7 +221,7 @@ GameServer.prototype = {
                         ++y_dir;
                         break;
                     case 'M':
-                        player.fires.push(item.data);
+                        player.bullets.push(item.data);
                         break;
                     case 'A':
                         heading = item.data;

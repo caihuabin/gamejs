@@ -1,5 +1,5 @@
 # gamejs
-A realtime and multiplayer HTML5 game, writen in Node.js, Socket.io, HTML5/Canvas.
+A realtime and multiplayer nodejs game, writen in Node.js, Socket.io, HTML5/Canvas.
 
 If you have a problem or have some good advice? Welcome to star and submit "Pull Request" or submit a issue.❤
 ## Online DEMO

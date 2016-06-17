@@ -3,7 +3,6 @@ define(function(require){
   var CONSTANT = config.CONSTANT;
   var eventEmitter = config.eventEmitter;
 
-  var Sprite = require('game/sprites').Sprite;
   var io = require('socket.io/socket.io');
   var gameUtil = require('game/util');
   var Interpolation = gameUtil.Interpolation;
@@ -11,12 +10,16 @@ define(function(require){
 
   var GameRender = require('./gameRender');
   var spaceShipPainter = GameRender.spaceShipPainter;
-  var Fire = GameRender.Fire;
+  
+  var Bullet = require('./gameWeapons').Bullet;
 
   var GameInput = require('./gameInput');
   var handleInput = GameInput.handleInput;
   var processInput = GameInput.processInput;
   var checkCollision = GameInput.checkCollision;
+
+  var GamePlayers = require('./gamePlayers');
+  var SpaceShipPlayer = GamePlayers.SpaceShipPlayer;
 
   var GameClient = function(gameEngine){
     this.gameEngine = gameEngine;
@@ -56,7 +59,7 @@ define(function(require){
       setInterval(function(){
         this.last_ping_time = new Date().getTime() - this.fake_lag;
         this.socket.send('p#' + (this.last_ping_time) );
-      }.bind(this), 1000);
+      }.bind(this), 5000);
       
     },
     onDisconnect: function(data) {
@@ -155,17 +158,17 @@ define(function(require){
         if(last_item.seq <= sprite.last_input_seq) continue;
 
         if(this.client_smoothing && previous_item) {
-          pos = Interpolation.v_lerp({x: sprite.left, y: sprite.top}, Interpolation.v_lerp(previous_item.pos, last_item.pos, smooth), smooth );
-          sprite.top = pos.y;
-          sprite.left = pos.x;
+          pos = Interpolation.v_lerp({x: sprite.position.x, y: sprite.position.y}, Interpolation.v_lerp(previous_item.pos, last_item.pos, smooth), smooth );
+          sprite.position.y = pos.y;
+          sprite.position.x = pos.x;
         }
         else{
-          sprite.top = last_item.pos.y;
-          sprite.left = last_item.pos.x;
+          sprite.position.y = last_item.pos.y;
+          sprite.position.x = last_item.pos.x;
         }
         sprite.heading = last_item.heading;
-        last_item.fires.forEach(function(fire){
-          sprite.fires.push(new Fire(fire[0], fire[1], fire[2], fire[3]));
+        last_item.bullets.forEach(function(bullet){
+          sprite.bullets.push(new Bullet(bullet[0], bullet[1], bullet[2], bullet[3]));
         });
         sprite.last_input_seq = last_item.seq;
       }
@@ -196,8 +199,18 @@ define(function(require){
       this.socket.send('c#' + this.players.self.color);
     },
     onOtherPlayerJoinGameMessage: function(data) {
-      var other_sprite = createSprite('other_sprite', spaceShipPainter, [processInput, checkCollision], {left: data.pos.x, top: data.pos.y, heading: data.heading});
-      other_sprite.color = CONSTANT.SPACESHIPCOLOR2;
+
+      var other_sprite = new SpaceShipPlayer(
+        'other_sprite', 
+        spaceShipPainter, 
+        [processInput, checkCollision], 
+        {
+          position: {x: data.pos.x, y: data.pos.y},
+          heading: data.heading, 
+          color: data.color || CONSTANT.SPACESHIPCOLOR2,
+          score: data.score || 0
+        });
+      
       this.gameEngine.addSprite(other_sprite);
 
       var other_player = new GamePlayer(other_sprite, data.id);
@@ -210,8 +223,14 @@ define(function(require){
     onJoinGameMessage: function(data) {
       var server_time = parseFloat(data);
       
-      var self_sprite = createSprite('self_sprite', spaceShipPainter, [handleInput, processInput, checkCollision], {});
-      self_sprite.color = CONSTANT.SPACESHIPCOLOR1;
+      var self_sprite = new SpaceShipPlayer(
+        'self_sprite', 
+        spaceShipPainter, 
+        [handleInput, processInput, checkCollision], 
+        {
+          color: data.color || CONSTANT.SPACESHIPCOLOR1,
+          score: data.score || 0
+        });
       this.gameEngine.addSprite(self_sprite);
 
       var self_player = new GamePlayer(self_sprite, this.clientid);
@@ -349,37 +368,10 @@ define(function(require){
     create_timer: function(){
       setInterval(function(){
         this.local_time = this.gameEngine.gameTime;
-      }.bind(this), 100);
+      }.bind(this), 500);
     }
 
   };
-  var createSprite = function(name, painter, update, opts){
-    var sprite = new Sprite(name, painter, update);
-    sprite.width = CONSTANT.SPACESHIPWIDTH;
-    sprite.height = CONSTANT.SPACESHIPHEIGHT;
-    sprite.color = CONSTANT.SPACESHIPCOLOR1;
-
-    sprite.top = opts.top || CONSTANT.WORLD_HEIGHT - sprite.height/2;
-    sprite.left = opts.left || sprite.width/2;
-    sprite.heading = opts.heading || Math.PI/2;
-    sprite.score = opts.score || 0;
-    sprite.velocityX = sprite.velocityY = 500; // pixels/second
-
-    sprite.input = {left:false, right:false, up: false, down: false, mouse: null, score: false, damage: false};
-    sprite.inputs = [];
-    sprite.input_seq = 0;
-    sprite.last_input_seq = -1;
-
-    sprite.fires = [];
-
-    sprite.position_limit = {
-      top_min: 0 + sprite.height/2,
-      left_min: 0 + sprite.width/2,
-      top_max: CONSTANT.WORLD_HEIGHT - sprite.height/2,
-      left_max: CONSTANT.WORLD_WIDTH - sprite.width/2
-    };
-    return sprite;
-  }
 
   return GameClient;
 

@@ -1,9 +1,11 @@
 define(function(require, exports, module){
 
   var GameEngine = require('game/gameEngine');
+  var GameScene = require('./gameScene');
   var GameClient = require('./gameClient');
 
   var gameEngine = new GameEngine('gamejs', 'viewport');
+  var gameScene = new GameScene();
   gameEngine.initialize = function(){
     var self = this;
     var lastKeyListenerTime = 0,
@@ -11,9 +13,17 @@ define(function(require, exports, module){
     var CONSTANT = require('./config').CONSTANT;
     var GameRender = require('./gameRender'),
         SpaceShipCanvas = GameRender.SpaceShipCanvas,
+        EnemyShipCanvasA = GameRender.EnemyShipCanvasA,
+        EnemyShipCanvasB = GameRender.EnemyShipCanvasB,
+        EnemyShipCanvasC = GameRender.EnemyShipCanvasC,
+        EnemyShipCanvasD = GameRender.EnemyShipCanvasD,
+        EnemyShipCanvasE = GameRender.EnemyShipCanvasE,
+        EnemyShipCanvasF = GameRender.EnemyShipCanvasF,
+        EnemyShipCanvasG = GameRender.EnemyShipCanvasG,
+        EnemyShipCanvasH = GameRender.EnemyShipCanvasH,
+
         StarCanvas = GameRender.StarCanvas,
         paintSpace = GameRender.paintSpace,
-        paintFire = GameRender.paintFire,
         paintScore = GameRender.paintScore;
     var gameUtil = require('game/util'),
         windowToCanvas = gameUtil.windowToCanvas;
@@ -32,6 +42,14 @@ define(function(require, exports, module){
 
     self.queueCanvasFun(StarCanvas);
     self.queueCanvasFun(SpaceShipCanvas);
+    self.queueCanvasFun(EnemyShipCanvasA);
+    self.queueCanvasFun(EnemyShipCanvasB);
+    self.queueCanvasFun(EnemyShipCanvasC);
+    self.queueCanvasFun(EnemyShipCanvasD);
+    self.queueCanvasFun(EnemyShipCanvasE);
+    self.queueCanvasFun(EnemyShipCanvasF);
+    self.queueCanvasFun(EnemyShipCanvasG);
+    self.queueCanvasFun(EnemyShipCanvasH);
 
     eventEmitter.addListener('play-sound', function(sound){
       self.playSound(sound);
@@ -40,21 +58,22 @@ define(function(require, exports, module){
     // Game Paint Methods.........................................
        
     self.startAnimate = function (ctx, time) {
-       
+      
     };
 
-    self.paintOverSprites = function () {
+    self.paintOverSprites = function (time) {
       var ctx = this.context;
       var sprites = this.sprites;
       var self_sprite = this.getSprite('self_sprite');
-      paintFire(ctx, sprites);
-      paintScore(ctx, self_sprite.score);
+      paintScore(ctx, self_sprite.score, time);
+
+      gameScene.animate(self_sprite, ctx, sprites, time);
     };
 
-    self.paintUnderSprites = function () {
+    self.paintUnderSprites = function (time) {
       var starCanvas = this.getCanvas('starCanvas'),
           ctx = this.context;
-      paintSpace(ctx, starCanvas);
+      paintSpace(ctx, starCanvas, time);
     };
     // Key Listeners..............................................
     self.addKeyListener({
@@ -195,5 +214,6 @@ define(function(require, exports, module){
   var gameClient = new GameClient(gameEngine);
   exports.gameEngine = gameEngine;
   exports.gameClient = gameClient;
+  exports.gameScene = gameScene;
 
 });

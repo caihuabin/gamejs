@@ -68,7 +68,7 @@ define(function(){
     this.soundOn = true;
     this.soundChannels = [];
     this.audio = new Audio();
-    this.NUM_SOUND_CHANNELS = 10;
+    this.NUM_SOUND_CHANNELS = 20;
 
     for (var i=0; i < this.NUM_SOUND_CHANNELS; ++i) {
       var audio = new Audio();
@@ -231,13 +231,13 @@ define(function(){
         this.clearScreen();     // Clear the screen in preparation for next frame
 
         this.startAnimate(this.context, time);  // Override as you wish
-        this.paintUnderSprites(); // Override as you wish
+        this.paintUnderSprites(time); // Override as you wish
 
         this.updateSprites(time); // Invoke sprite behaviors
         this.paintSprites(time);  // Paint sprites in the canvas
 
-        this.paintOverSprites();  // Override as you wish
-        this.endAnimate();      // Override as you wish
+        this.paintOverSprites(time);  // Override as you wish
+        this.endAnimate(time);      // Override as you wish
 
         this.lastTime = time;
 
@@ -467,9 +467,9 @@ define(function(){
     // Override the following methods as desired:
     initialize: function(){},
     startAnimate:    function (ctx, time) { }, // These methods are called by
-    paintUnderSprites: function ()    { }, // animate() in the order they
-    paintOverSprites:  function ()    { }, // are listed. Override them
-    endAnimate:      function ()    { }  // as you wish.
+    paintUnderSprites: function (time)    { }, // animate() in the order they
+    paintOverSprites:  function (time)    { }, // are listed. Override them
+    endAnimate:      function (time)    { }  // as you wish.
   };
   return GameEngine;
 });

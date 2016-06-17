@@ -2,9 +2,12 @@ define(function (require) {
   var Game = require('./game');
   var gameEngine = Game.gameEngine;
   var gameClient = Game.gameClient;
+  var gameScene = Game.gameScene;
   var eventEmitter = require('./config').eventEmitter;
 
-  var spaceShipPainter = require('./gameRender').spaceShipPainter;
+  var GameRender = require('./gameRender');
+  var spaceShipPainter = GameRender.spaceShipPainter;
+  var enemyShipPainter = GameRender.enemyShipPainter;
 
   var overlayDiv = document.getElementById('overlayDiv');
   var selectGamesDiv = document.getElementById('selectGamesDiv');
@@ -22,9 +25,21 @@ define(function (require) {
       
       gameEngine.ready(function(){
         overlayDiv.style.display = 'none';
-        gameEngine.playSound('manAtWar');
+        //gameEngine.playSound('manAtWar');
         spaceShipPainter.spaceShipCanvas = gameEngine.getCanvas('spaceShipCanvas');
+        enemyShipPainter.enemyShipCanvases = {
+          A: gameEngine.getCanvas('enemyShipCanvasA'), 
+          B: gameEngine.getCanvas('enemyShipCanvasB'), 
+          C: gameEngine.getCanvas('enemyShipCanvasC'), 
+          D: gameEngine.getCanvas('enemyShipCanvasD'), 
+          E: gameEngine.getCanvas('enemyShipCanvasE'), 
+          F: gameEngine.getCanvas('enemyShipCanvasF'), 
+          G: gameEngine.getCanvas('enemyShipCanvasG'), 
+          H: gameEngine.getCanvas('enemyShipCanvasH')
+        };
+
         gameEngine.start();
+        gameScene.start();
       });
     }
   };

@@ -1,8 +1,7 @@
 define(function(require, exports, module){
-  var GameRender = require('./gameRender');
   var eventEmitter = require('./config').eventEmitter;
 
-  var Fire = GameRender.Fire;
+  var Bullet = require('./gameWeapons').Bullet;
 
   var handleInput = {
     execute: function(sprite, context, time){
@@ -37,7 +36,7 @@ define(function(require, exports, module){
       }
       if (!!sprite.input.mouse)
       {
-        sprite.inputs.push({input: 'M', data: [sprite.left, sprite.top, sprite.input.mouse.x, sprite.input.mouse.y], seq: ++sprite.input_seq, time: time});
+        sprite.inputs.push({input: 'M', data: [sprite.position.x, sprite.position.y, sprite.input.mouse.x, sprite.input.mouse.y], seq: ++sprite.input_seq, time: time});
         sprite.input.mouse = null;
       }
       if(sprite.input.score){
@@ -92,11 +91,11 @@ define(function(require, exports, module){
               ++y_dir;
               break;
             case 'M':
-              sprite.fires.push(new Fire(item.data[0], item.data[1], item.data[2], item.data[3]) );
+              sprite.bullets.push(new Bullet(item.data[0], item.data[1], item.data[2], item.data[3]) );
               eventEmitter.emitEvent('play-sound', ['shoot2']);
               break;
             case 'A':
-              sprite.painter.thrust(item.data);
+              sprite.engineThrust = true;
               heading = item.data;
               break;
             case '+':
@@ -116,8 +115,8 @@ define(function(require, exports, module){
         sprite.inputs = [];
       }
       //sprite.top += y_dir * game.pixelsPerFrame(time, sprite.velocityY);
-      sprite.top += y_dir * sprite.velocityY/60;
-      sprite.left += x_dir * sprite.velocityX/60;
+      sprite.position.y += y_dir * sprite.velocityY/60;
+      sprite.position.x += x_dir * sprite.velocityX/60;
       if(heading !== null){
         sprite.heading = heading;
       }
@@ -127,17 +126,17 @@ define(function(require, exports, module){
 
   var checkCollision = {
     execute: function(sprite, context, time){
-      if(sprite.top <= sprite.position_limit.top_min) {
-        sprite.top = sprite.position_limit.top_min;
+      if(sprite.position.y <= sprite.position_limit.y_min) {
+        sprite.position.y = sprite.position_limit.y_min;
       }
-      if(sprite.top >= sprite.position_limit.top_max ) {
-        sprite.top = sprite.position_limit.top_max;
+      if(sprite.position.y >= sprite.position_limit.y_max ) {
+        sprite.position.y = sprite.position_limit.y_max;
       }
-      if(sprite.left <= sprite.position_limit.left_min) {
-        sprite.left = sprite.position_limit.left_min;
+      if(sprite.position.x <= sprite.position_limit.x_min) {
+        sprite.position.x = sprite.position_limit.x_min;
       }
-      if(sprite.left >= sprite.position_limit.left_max ) {
-        sprite.left = sprite.position_limit.left_max;
+      if(sprite.position.x >= sprite.position_limit.x_max ) {
+        sprite.position.x = sprite.position_limit.x_max;
       }
       if(sprite.heading > Math.PI * 2 || sprite.heading < 0){
         sprite.heading = Math.PI/2;

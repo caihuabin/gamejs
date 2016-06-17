@@ -1,21 +1,20 @@
 define(function(require, exports, module){
-  var CONSTANT = require('./config').CONSTANT;
+  var Config = require('./config');
+  var CONSTANT = Config.CONSTANT;
+  var eventEmitter = Config.eventEmitter;
   var gameUtil = require('game/util');
   var maxOrbit = gameUtil.maxOrbit;
+  var EnemyBullet = require('./gameWeapons').EnemyBullet;
 
   var spaceShipPainter = {
     spaceShipCanvas: null,
-    engineThrust: false,
-    thrust: function(angle){
-      this.engineThrust = true;
-    },
     paint: function (sprite, context) {
       var spaceShipCanvas = this.spaceShipCanvas;
       var ctx = context;
       
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.translate(sprite.left, sprite.top);
+        ctx.translate(sprite.position.x, sprite.position.y);
         ctx.scale(0.75, 0.75);
         ctx.rotate(sprite.heading);
         ctx.translate(0, -4);
@@ -24,10 +23,10 @@ define(function(require, exports, module){
         ctx.beginPath();
         ctx.moveTo(-12, 20);
         ctx.lineTo(12, 20);
-        if (this.engineThrust)
+        if (sprite.engineThrust)
         {
           ctx.lineTo(0, 50 + Rnd() * 80);
-          this.engineThrust = false;
+          sprite.unThrust();
         }
         else{
           ctx.lineTo(0, 50 + Rnd() * 50);
@@ -38,13 +37,161 @@ define(function(require, exports, module){
         ctx.restore();
         
       ctx.save();
-      ctx.translate(sprite.left, sprite.top);
+      ctx.translate(sprite.position.x, sprite.position.y);
       ctx.scale(0.75, 0.75);
       ctx.rotate(sprite.heading);
       ctx.translate(0, -4);
       ctx.shadowBlur = 8;
       ctx.shadowColor = CONSTANT.SPACESHIPSHADOW;
       ctx.drawImage(spaceShipCanvas, spaceShipCanvas.width * -0.5, spaceShipCanvas.width * -0.5);
+      ctx.restore();
+    }
+  };
+  var enemyShipPainter = {
+    enemyShipCanvases: null,
+    update: function(sprite, self_sprite, enemyBullets){
+      var self_player = self_sprite;
+      if(sprite.position.y <= sprite.position_limit.y_min) {
+        sprite.vector.y = -sprite.vector.y;
+      }
+      if(sprite.position.y >= sprite.position_limit.y_max ) {
+        sprite.vector.y = -sprite.vector.y;
+      }
+      if(sprite.position.x <= sprite.position_limit.x_min) {
+        sprite.vector.x = -sprite.vector.x;
+      }
+      if(sprite.position.x >= sprite.position_limit.x_max ) {
+        sprite.vector.x = -sprite.vector.x;
+      }
+
+      switch (sprite.type){
+        case 'A':
+          // DUMBO: change direction randomly
+          if (Rnd() < 0.01){
+            sprite.vector.y = -(sprite.vector.y + (0.35 - Rnd()));
+          }
+          break;
+        case 'B':
+          // ZONER: randomly reorientate towards player ("perception level")
+          // so player can avade by moving around them
+          if (Rnd() < 0.05){
+            // head towards player - generate a vector pointed at the player
+            // by calculating a vector between the player and enemy positions
+            var v = self_player.position.nsub(sprite.position);
+            // scale resulting vector down to fixed vector size i.e. speed
+            sprite.vector = v.scaleTo(3);
+          }
+          break;
+        case 'C':
+          // TRACKER: very perceptive and faster - this one is mean
+          if (Rnd() < 0.25){
+            var v = self_player.position.nsub(sprite.position);
+            sprite.vector = v.scaleTo(5.5);
+          }
+
+          break;
+        case 'D':
+          // BORG: randomly very fast dash towards player, otherwise it slows down
+          if (Rnd() < 0.03){
+            var v = self_player.position.nsub(sprite.position);
+            sprite.vector = v.scaleTo(8);
+          }
+          else{
+            sprite.vector.scale(0.95);
+          }
+          break;
+        case 'E':
+          // DODGER: perceptive and fast - and tries to dodgy bullets!
+          var dodged = false;
+          // if we are close to the player then don't try and dodge,
+          // otherwise enemy might dash away rather than go for the kill
+          if (self_player.position.nsub(sprite.position).length() > 150){
+            var p = sprite.position,
+                r = sprite.radius + 50;  // bullet "distance" perception
+              // look at player bullets list - are any about to hit?
+            for (var i=0, j=self_player.bullets.length, bullet, n; i < j; i++){
+              bullet = self_player.bullets[i];
+              // test the distance against the two radius combined
+              if (bullet.position.distance(p) <= bullet.radius + r){
+                // if so attempt a fast sideways dodge!
+                var v = bullet.position.nsub(p).scaleTo(7);
+                // randomise dodge direction a bit
+                v.rotate((n = Rnd()) < 0.5 ? n*PIO4 : -n*PIO4).invert();
+                sprite.vector = v;
+                dodged = true;
+                break;
+              }
+            }
+          }
+          if (!dodged && Rnd() < 0.04){
+            var v = self_player.position.nsub(sprite.position);
+            sprite.vector = v.scaleTo(5.5);
+          }
+          break;
+        case 'F':
+          // SPLITTER: moves towards player - splits into 2 smaller versions when destroyed
+          if (Rnd() < 0.05){
+            var v = self_player.position.nsub(sprite.position);
+            sprite.vector = v.scaleTo(3.5);
+          }
+          break;
+        case 'G':
+          // BOMBER: if we are too near the player move away
+          //         if we are too far from the player move towards
+          //         - then slowing down into a firing position
+          var v = self_player.position.nsub(sprite.position);
+          if (v.length() > 400){
+            // move closer
+            if (Rnd() < 0.08) sprite.vector = v.scaleTo(6);
+          }
+          else if (v.length() < 350){
+            // move away
+            if (Rnd() < 0.08) sprite.vector = v.invert().scaleTo(6);
+          }
+          else{
+            // slow down into a firing position
+            var frameStart = Date.now();
+            sprite.vector.scale(0.85);
+            // reguarly fire at the player
+            if (frameStart - sprite.bulletRecharge > sprite.BULLET_RECHARGE && self_player.alive){
+              
+              eventEmitter.emitEvent('play-sound', ['enemy-bomb']);
+              // update last fired frame and generate a bullet
+              sprite.bulletRecharge = frameStart;
+              // generate a vector pointed at the player
+              // by calculating a vector between the player and enemy positions
+              // then scale to a fixed size - i.e. bullet speed
+              var v = self_player.position.nsub(sprite.position).scaleTo(8);
+              // slightly randomize the direction to apply some accuracy issues
+              v.x += (Rnd() * 2 - 1);
+              v.y += (Rnd() * 2 - 1);
+              var bullet = new EnemyBullet(sprite.position.clone(), v, 10);
+              enemyBullets.push(bullet);
+            }
+          }
+          break;
+        case 'H':
+          // SPLITTER: - mini version
+          if (Rnd() < 0.04){
+            var v = self_player.position.nsub(sprite.position);
+            sprite.vector = v.scaleTo(6);
+          }
+          break;
+      }
+    },
+    paint: function (sprite, context) {
+      var enemyShipCanvas = this.enemyShipCanvases[sprite.type];
+      var ctx = context;
+      
+      ctx.save();
+      ctx.translate(sprite.position.x, sprite.position.y);
+      if (sprite.hit)
+      {
+        // double render in "lighter" mode for a retro weapon hit effect
+        ctx.globalCompositeOperation = "lighter";
+        sprite.unHit();
+      }
+      ctx.drawImage(enemyShipCanvas, enemyShipCanvas.width * -0.5, enemyShipCanvas.width * -0.5);
       ctx.restore();
     }
   };
@@ -73,80 +220,6 @@ define(function(require, exports, module){
     ctx.globalAlpha = this.alpha;
     ctx.drawImage(starImg, x - this.radius / 2, y - this.radius / 2, this.radius, this.radius);
     this.timePassed += this.speed;
-  };
-
-  var Fire = function( sx, sy, tx, ty ) {
-    this.left = sx;
-    this.top = sy;
-
-    this.start_x = sx;
-    this.start_y = sy;
-
-    this.target_x = tx;
-    this.target_y = ty;
-
-    this.isEnd = false;
-    // track the past coordinates of each firework to create a trail effect, increase the coordinate count to create more prominent trails
-    this.coordinates = [];
-    this.coordinateCount = 3;
-    // populate initial coordinate collection with the current coordinates
-    while( this.coordinateCount-- ) {
-      this.coordinates.push( [ this.left, this.top ] );
-    }
-    this.angle = Math.atan2( ty - sy, tx - sx );
-    this.speed = 2;
-    this.acceleration = 1.05;
-    this.brightness = randomInt( 50, 70 );
-    // circle target indicator radius
-    this.targetRadius = 1;
-  };
-  Fire.prototype.end = function(){
-    if(this.angle < 0){
-      if(this.top <= this.target_y){
-        this.isEnd = true;
-      }
-    }
-    else{
-      if(this.top >= this.target_y){
-        this.isEnd = true;
-      }
-    }
-    
-    return this.isEnd;
-  };
-  Fire.prototype.hit = function(left, top){
-    if((Math.abs(this.left - left) <= CONSTANT.SPACESHIPSIZE) && (Math.abs(this.top - top) <= CONSTANT.SPACESHIPSIZE)){
-      return true;
-    }
-    return false;
-  };
-  Fire.prototype.update = function() {
-    this.coordinates.pop();
-    this.coordinates.unshift( [ this.left, this.top ] );
-
-    if( this.targetRadius < 8 ) {
-      this.targetRadius += 0.3;
-    } else {
-      this.targetRadius = 1;
-    }
-    this.speed *= this.acceleration;
-    var vx = Math.cos( this.angle ) * this.speed,
-      vy = Math.sin( this.angle ) * this.speed;
-
-    this.left += vx;
-    this.top += vy;
-
-  };
-  Fire.prototype.draw = function(ctx) {
-    ctx.beginPath();
-    ctx.moveTo( this.coordinates[ this.coordinates.length - 1][ 0 ], this.coordinates[ this.coordinates.length - 1][ 1 ] );
-    ctx.lineTo( this.left, this.top );
-    ctx.strokeStyle = 'hsl(' + CONSTANT.FIRE_HUE + ', 100%, ' + this.brightness + '%)';
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.arc( this.target_x, this.target_y, this.targetRadius, 0, Math.PI * 2 );
-    ctx.stroke();
   };
 
   var StarCanvas = {
@@ -183,19 +256,19 @@ define(function(require, exports, module){
       var obj = new K3D.K3DObject();
       with (obj)
       {
-         drawmode = "wireframe";
-         shademode = "depthcue";
-         depthscale = 28;
-         linescale = 3.5;
-         perslevel = 256;
-         color = [255,255,255];
-         addphi = -1.0;
-         scale = 0.8;
-         init(
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 28;
+        linescale = 3.5;
+        perslevel = 256;
+        color = [255,255,255];
+        addphi = -1.0;
+        scale = 0.8;
+        init(
           [{x:-30,y:-15,z:0}, {x:-10,y:-25,z:15}, {x:10,y:-25,z:15}, {x:30,y:-15,z:0}, {x:10,y:-25,z:-15}, {x:-10,y:-25,z:-15}, {x:0,y:40,z:0}, {x:0,y:5,z:15}, {x:0,y:5,z:-15}],
           [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:4}, {a:4,b:5}, {a:5,b:0}, {a:1,b:7}, {a:7,b:2}, {a:5,b:8}, {a:8,b:4}, {a:7,b:6}, {a:6,b:8}, {a:0,b:6}, {a:3,b:6}, {a:1,b:5}, {a:2,b:4}],
           []
-         );
+        );
       }
       k3d.addK3DObject(obj);
       k3d.paused = false;
@@ -204,7 +277,266 @@ define(function(require, exports, module){
       return spaceShipCanvas;
     }
   };
+  // Dumbo: blue stretched cubiod
+  var EnemyShipCanvasA = {
+    name: 'enemyShipCanvasA', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
 
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 28;
+        linescale = 3;
+        perslevel = 256;
+        color = [0,128,255];
+        addphi = -0.75;
+        addgamma = -0.50;
+        init(
+          [{x:-20,y:-20,z:12}, {x:-20,y:20,z:12}, {x:20,y:20,z:12}, {x:20,y:-20,z:12}, {x:-10,y:-10,z:-12}, {x:-10,y:10,z:-12}, {x:10,y:10,z:-12}, {x:10,y:-10,z:-12}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:4,b:5}, {a:5,b:6}, {a:6,b:7}, {a:7,b:4}, {a:0,b:4}, {a:1,b:5}, {a:2,b:6}, {a:3,b:7}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Zoner: yellow diamond
+  var EnemyShipCanvasB = {
+    name: 'enemyShipCanvasB', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 28;
+        linescale = 3;
+        perslevel = 256;
+        color = [255,255,0];
+        addphi = 0.35;
+        addgamma = -0.35;
+        addtheta = -0.75;
+        init(
+          [{x:-20,y:-20,z:0}, {x:-20,y:20,z:0}, {x:20,y:20,z:0}, {x:20,y:-20,z:0}, {x:0,y:0,z:-20}, {x:0,y:0,z:20}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:0,b:4}, {a:1,b:4}, {a:2,b:4}, {a:3,b:4}, {a:0,b:5}, {a:1,b:5}, {a:2,b:5}, {a:3,b:5}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Tracker: red flattened square
+  var EnemyShipCanvasC = {
+    name: 'enemyShipCanvasC', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 28;
+        linescale = 3;
+        perslevel = 256;
+        color = [255,96,0];
+        addtheta = 0.75;
+        init(
+          [{x:-20,y:-20,z:5}, {x:-20,y:20,z:5}, {x:20,y:20,z:5}, {x:20,y:-20,z:5}, {x:-15,y:-15,z:-5}, {x:-15,y:15,z:-5}, {x:15,y:15,z:-5}, {x:15,y:-15,z:-5}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:4,b:5}, {a:5,b:6}, {a:6,b:7}, {a:7,b:4}, {a:0,b:4}, {a:1,b:5}, {a:2,b:6}, {a:3,b:7}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Borg: big green cube
+  var EnemyShipCanvasD = {
+    name: 'enemyShipCanvasD', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 128;
+      enemyShipCanvas.height = 128;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        linescale = 3;
+        perslevel = 256;
+        color = [0,255,64];
+        depthscale = 96;
+        addphi = -1.0;
+        init(
+          [{x:-40,y:-40,z:40}, {x:-40,y:40,z:40}, {x:40,y:40,z:40}, {x:40,y:-40,z:40}, {x:-40,y:-40,z:-40}, {x:-40,y:40,z:-40}, {x:40,y:40,z:-40}, {x:40,y:-40,z:-40}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:4,b:5}, {a:5,b:6}, {a:6,b:7}, {a:7,b:4}, {a:0,b:4}, {a:1,b:5}, {a:2,b:6}, {a:3,b:7}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Dodger: small cyan cube
+  var EnemyShipCanvasE = {
+    name: 'enemyShipCanvasE', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 28;
+        linescale = 3;
+        perslevel = 256;
+        color = [0,255,255];
+        addphi = 0.35; 
+        addtheta = -2.0;
+        init(
+          [{x:-20,y:-20,z:20}, {x:-20,y:20,z:20}, {x:20,y:20,z:20}, {x:20,y:-20,z:20}, {x:-20,y:-20,z:-20}, {x:-20,y:20,z:-20}, {x:20,y:20,z:-20}, {x:20,y:-20,z:-20}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:4,b:5}, {a:5,b:6}, {a:6,b:7}, {a:7,b:4}, {a:0,b:4}, {a:1,b:5}, {a:2,b:6}, {a:3,b:7}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Dodger: small cyan cube
+  var EnemyShipCanvasF = {
+    name: 'enemyShipCanvasF', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        linescale = 3;
+        perslevel = 256;
+        color = [148,0,255];
+        depthscale = 56;  // tweak for larger object
+        addphi = 2.0;
+        init(
+          [{x:-30,y:-20,z:0}, {x:0,y:-20,z:30}, {x:30,y:-20,z:0}, {x:0,y:-20,z:-30}, {x:0,y:30,z:0}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:0,b:4}, {a:1,b:4}, {a:2,b:4}, {a:3,b:4}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Dodger: small cyan cube
+  var EnemyShipCanvasG = {
+    name: 'enemyShipCanvasG', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        linescale = 3;
+        perslevel = 256;
+        color = [255,0,255];
+        depthscale = 56;
+        addgamma = -3.5;
+        init(
+          [{x:-30,y:-30,z:10}, {x:-30,y:30,z:10}, {x:30,y:30,z:10}, {x:30,y:-30,z:10}, {x:-15,y:-15,z:-15}, {x:-15,y:15,z:-15}, {x:15,y:15,z:-15}, {x:15,y:-15,z:-15}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:4,b:5}, {a:5,b:6}, {a:6,b:7}, {a:7,b:4}, {a:0,b:4}, {a:1,b:5}, {a:2,b:6}, {a:3,b:7}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
+  // Splitter-mini: see Splitter above
+  var EnemyShipCanvasH = {
+    name: 'enemyShipCanvasH', 
+    fun: function(){
+      var enemyShipCanvas = document.createElement('canvas'),
+        enemyShipCtx = enemyShipCanvas.getContext('2d');
+
+      enemyShipCanvas.width = 64;
+      enemyShipCanvas.height = 64;
+      var k3d = new K3D.RequestAnimController(enemyShipCanvas);
+      var obj = new K3D.K3DObject();
+      with (obj)
+      {
+        drawmode = "wireframe";
+        shademode = "depthcue";
+        depthscale = 16;  // tweak for smaller object
+        linescale = 3;
+        perslevel = 256;
+        color = [148,0,255];
+        addphi = 3.5;
+        init(
+          [{x:-15,y:-10,z:0}, {x:0,y:-10,z:15}, {x:15,y:-10,z:0}, {x:0,y:-10,z:-15}, {x:0,y:15,z:0}],
+          [{a:0,b:1}, {a:1,b:2}, {a:2,b:3}, {a:3,b:0}, {a:0,b:4}, {a:1,b:4}, {a:2,b:4}, {a:3,b:4}],
+          []);
+      }
+      k3d.addK3DObject(obj);
+      k3d.paused = false;
+      k3d.frame();
+
+      return enemyShipCanvas;
+    }
+  };
   var paintSpace = (function(CONSTANT, Star){
     var stars = [],
         hue = CONSTANT.STAR_HUE,
@@ -244,45 +576,22 @@ define(function(require, exports, module){
     ctx.restore();
   };
 
-  var paintFire = function(ctx, sprites){
-  	CONSTANT.FIRE_HUE += 0.5;
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-
-    sprites.forEach(function(sprite){
-      var fires = sprite.fires,
-        i = fires.length-1,
-        hit = false;
-      while(i > -1){
-        fires[i].draw(ctx);
-        fires[i].update();
-
-        for(var j = 0; j < sprites.length; j++){
-          if(sprites[j] !== sprite){
-            hit = fires[i].hit(sprites[j].left, sprites[j].top);
-            if(hit){
-              sprites[j].input.damage = true;
-              sprite.input.score = true;
-            }
-          }
-        }
-
-        (hit || fires[i].end()) && fires.splice( i, 1 );
-        --i;
-      }
-    });
-    ctx.restore();
-  };
-
   exports.spaceShipPainter = spaceShipPainter;
+  exports.enemyShipPainter = enemyShipPainter;
 
   exports.Star = Star;
-  exports.Fire = Fire;
 
   exports.StarCanvas = StarCanvas;
   exports.SpaceShipCanvas = SpaceShipCanvas;
+  exports.EnemyShipCanvasA = EnemyShipCanvasA;
+  exports.EnemyShipCanvasB = EnemyShipCanvasB;
+  exports.EnemyShipCanvasC = EnemyShipCanvasC;
+  exports.EnemyShipCanvasD = EnemyShipCanvasD;
+  exports.EnemyShipCanvasE = EnemyShipCanvasE;
+  exports.EnemyShipCanvasF = EnemyShipCanvasF;
+  exports.EnemyShipCanvasG = EnemyShipCanvasG;
+  exports.EnemyShipCanvasH = EnemyShipCanvasH;
 
   exports.paintSpace = paintSpace;
-  exports.paintFire = paintFire;
   exports.paintScore = paintScore;
 });
