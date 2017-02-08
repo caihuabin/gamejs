@@ -1,40 +1,40 @@
 {
-  "name": "gamejs",
-  "description": "Multiplayer, real-time, javascript game",
-  "version": "0.0.0",
-  "author": "icyse <1317203071@qq.com>",
-  "private": true,
-  "scripts": {
-    "start": "node ./bin/www"
-  },
-  "license": "MIT",
-  "keywords": [
-    "gamejs",
-    "framework",
-    "game",
-    "multiplayer",
-    "real-time",
-    "javascript",
-    "web",
-    "app",
-    "api"
-  ],
-  "dependencies": {
-    "body-parser": "~1.13.2",
-    "cookie-parser": "~1.3.5",
-    "debug": "~2.2.0",
-    "express": "~4.13.1",
-    "express-session": "~1.13.0",
-    "jade": "~1.11.0",
-    "morgan": "~1.6.1",
-    "serve-favicon": "~2.3.0",
-    "mongoose": "^4.3.7",
-    "redis": "^2.4.2",
-    "connect-redis": "~2.4.1",
-    "socket.io": "~1.4.5",
-    "node-uuid": "~1.4.7"
-  },
-  "engines": {
-    "node": ">= 0.10.0"
-  }
+    "name": "gamejs",
+    "description": "Multiplayer, real-time, javascript game",
+    "version": "0.0.0",
+    "author": "icyse <1317203071@qq.com>",
+    "private": true,
+    "scripts": {
+        "start": "node ./bin/www"
+    },
+    "license": "MIT",
+    "keywords": [
+        "gamejs",
+        "framework",
+        "game",
+        "multiplayer",
+        "real-time",
+        "javascript",
+        "web",
+        "app",
+        "api"
+    ],
+    "dependencies": {
+        "body-parser": "~1.13.2",
+        "cookie-parser": "~1.3.5",
+        "debug": "~2.2.0",
+        "express": "~4.13.1",
+        "express-session": "~1.13.0",
+        "jade": "~1.11.0",
+        "morgan": "~1.6.1",
+        "serve-favicon": "~2.3.0",
+        "mongoose": "^4.3.7",
+        "redis": "^2.4.2",
+        "connect-redis": "~2.4.1",
+        "socket.io": "~1.4.5",
+        "node-uuid": "~1.4.7"
+    },
+    "engines": {
+        "node": ">= 0.10.0"
+    }
 }
