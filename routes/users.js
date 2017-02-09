@@ -8,61 +8,57 @@ var config = require('../config');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+    res.send('respond with a resource');
 });
 
-router.post('/', function (req, res, next) {
+router.post('/', function(req, res, next) {
     var username = req.body.username;
     var password = req.body.password;
     var cache_key = 'user' + username;
-    
-    if(!username || !password){
-    	return next(new Error('your name is empty!'));
+
+    if (!username || !password) {
+        return next(new Error('your name is empty!'));
     }
 
-    redisClient.getItem(cache_key, function (err, data) {
-        if(err){
+    redisClient.getItem(cache_key, function(err, data) {
+        if (err) {
             return next(err);
         }
-        if(data){
-            hash(password, config.salt, function(err, pass){
+        if (data) {
+            hash(password, config.salt, function(err, pass) {
                 if (err) return next(err);
-                if (pass === data.password){
-                    req.session.regenerate(function(){
+                if (pass === data.password) {
+                    req.session.regenerate(function() {
                         req.session.user = {
-                            _id : data._id,
+                            _id: data._id,
                             username: data.username,
                             time: data.time
                         };
                         res.redirect('/games');
                     });
-                }
-                else{
+                } else {
                     return next(new Error('invalid password'));
                 }
             });
-        }
-        else{
+        } else {
             var data = {
-                    _id : UUID(),
-                    username: username,
-                    password: password,
-                    time: Date.now()
-                };
-            hash(data.password, config.salt, function(err, pass){
+                _id: UUID(),
+                username: username,
+                password: password,
+                time: Date.now()
+            };
+            hash(data.password, config.salt, function(err, pass) {
                 if (err) {
                     return next(err);
-                }
-                else{
+                } else {
                     data.password = pass;
-                    redisClient.setItem(cache_key, data, redisClient.defaultExpired, function (err) {
+                    redisClient.setItem(cache_key, data, redisClient.defaultExpired, function(err) {
                         if (err) {
                             console.log('error:' + err.message);
-                        }
-                        else{
-                            req.session.regenerate(function(){
+                        } else {
+                            req.session.regenerate(function() {
                                 req.session.user = {
-                                    _id : data._id,
+                                    _id: data._id,
                                     username: data.username,
                                     time: data.time
                                 };
@@ -72,13 +68,13 @@ router.post('/', function (req, res, next) {
                     });
                 }
             });
-            
-            
+
+
         }
     });
-    
+
 });
-router.post('/check', function (req, res, next) {
+router.post('/check', function(req, res, next) {
     if (req.session.user) {
         res.json({
             isCheck: true,
@@ -91,8 +87,8 @@ router.post('/check', function (req, res, next) {
         });
     }
 });
-router.get('/logout', function (req, res) {
-    req.session.destroy(function(){
+router.get('/logout', function(req, res) {
+    req.session.destroy(function() {
         /*res.json({
             status: 'success',
             data: null

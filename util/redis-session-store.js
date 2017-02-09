@@ -1,14 +1,13 @@
 var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var config = require('../config');
-var store = new RedisStore(
-  {
-    host: config.RedisHost, 
-    port: config.RedisPort, 
-    pass: config.RedisPass, 
+var store = new RedisStore({
+    host: config.RedisHost,
+    port: config.RedisPort,
+    pass: config.RedisPass,
     ttl: config.sessionExpiration,
-    db: 2, 
-    prefix:'sess:'
-  });
+    db: 2,
+    prefix: 'sess:'
+});
 
 module.exports = store;

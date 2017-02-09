@@ -1,4 +1,4 @@
-var UUID        = require('node-uuid');
+var UUID = require('node-uuid');
 var GameServer = require('./gameServer.js');
 var redisClient = require('../util/redisClient');
 
@@ -9,13 +9,13 @@ var Game = {
     messages: [],
     PLAYER_LIMIT: 3,
     onMessage: function(client, message) {
-        if(this.fake_latency && message.split('#')[0].substr(0,1) == 'i') {
-                //store all input message
-            this.messages.push({client:client, message:message});
-            setTimeout(function(){
-                if(this.messages.length) {
-                    this._onMessage( this.messages[0].client, this.messages[0].message );
-                    this.messages.splice(0,1);
+        if (this.fake_latency && message.split('#')[0].substr(0, 1) == 'i') {
+            //store all input message
+            this.messages.push({ client: client, message: message });
+            setTimeout(function() {
+                if (this.messages.length) {
+                    this._onMessage(this.messages[0].client, this.messages[0].message);
+                    this.messages.splice(0, 1);
                 }
             }.bind(this), this.fake_latency);
         } else {
@@ -27,24 +27,22 @@ var Game = {
         var message_type = message_parts[0];
 
         var thegame = null;
-        
-        switch(message_type){
+
+        switch (message_type) {
             case 'f':
-                if(client.status === 'ongame'){
+                if (client.status === 'ongame') {
                     client.send('s#w#You can not select game again.');
-                }
-                else{
+                } else {
                     client.status = 'ongame';
-                    if(message_parts[1] === '0'){
+                    if (message_parts[1] === '0') {
                         this.createGame(client, this.PLAYER_LIMIT);
-                    }
-                    else{
+                    } else {
                         this.findGame(client, message_parts[1]);
                     }
                 }
                 break;
             case 'i':
-            case 'c'://Client changed their color!
+            case 'c': //Client changed their color!
                 thegame = this.getGame(client.gameid);
                 thegame.handle_message(client, message);
                 break;
@@ -59,25 +57,25 @@ var Game = {
         }
     },
 
-    getGame: function(gameid){
-        if(this.games.hasOwnProperty(gameid) ){
+    getGame: function(gameid) {
+        if (this.games.hasOwnProperty(gameid)) {
             return this.games[gameid];
         }
         return null;
     },
-    getAllGames: function(){
+    getAllGames: function() {
         var games = [];
-        for(var key in this.games){
-            if(!this.games.hasOwnProperty(key)) continue;
+        for (var key in this.games) {
+            if (!this.games.hasOwnProperty(key)) continue;
             games.push(this.games[key]);
         }
         return games;
     },
-    getAvailableGames: function(){
+    getAvailableGames: function() {
         var games = [];
-        for(var key in this.games){
-            if(!this.games.hasOwnProperty(key)) continue;
-            if(this.games[key].check_available()){
+        for (var key in this.games) {
+            if (!this.games.hasOwnProperty(key)) continue;
+            if (this.games[key].check_available()) {
                 games.push(this.games[key]);
             }
         }
@@ -91,24 +89,22 @@ var Game = {
         this.startGame(thegame);
 
         var cache_key = 'player' + client.userid;
-        redisClient.getItem(cache_key, function (err, data) {
+        redisClient.getItem(cache_key, function(err, data) {
             if (err) {
                 console.log('error:' + err.message);
-            }
-            else{
-                try{
+            } else {
+                try {
                     thegame.addPlayer(client, data);
                     client.gameid = thegame.gameid;
                     console.log('server host at:  ' + thegame.server_time);
                     console.log('player: ' + client.userid + ' created a game with id: ' + client.gameid);
-                }
-                catch(err){
+                } catch (err) {
                     console.log('error:' + err.message);
                     client.send('s#w#' + err.message);
                 }
             }
         });
-        
+
         return thegame;
     },
     startGame: function(game) {
@@ -116,39 +112,36 @@ var Game = {
     },
     findGame: function(client, gameid) {
         console.log('looking for a game. We have : ' + this.game_count);
-        if(this.game_count) {
+        if (this.game_count) {
             var thegame = this.getGame(gameid);
 
-            if(thegame) {
-                try{
+            if (thegame) {
+                try {
                     thegame.addPlayer(client, null);
                     client.gameid = thegame.gameid;
                     console.log('player ' + client.userid + ' joined a game with id ' + client.gameid);
-                }
-                catch(err){
+                } catch (err) {
                     console.log('error:' + err.message);
                     this.createGame(client, this.PLAYER_LIMIT);
                 }
-            }
-            else {
+            } else {
                 console.log('the game is removed, create one.');
                 this.createGame(client, this.PLAYER_LIMIT);
             }
-        } 
-        else {
+        } else {
             this.createGame(client, this.PLAYER_LIMIT);
         }
     },
     endGame: function(client) {
         var thegame = this.getGame(client.gameid);
-        
-        if(thegame) {
+
+        if (thegame) {
             var player = thegame.removePlayer(client);
             client.gameid = null;
-            if(thegame.players.length < 1) {
+            if (thegame.players.length < 1) {
                 delete this.games[thegame.gameid];
                 this.game_count--;
-                console.log('game removed. there are now ' + this.game_count + ' games' );
+                console.log('game removed. there are now ' + this.game_count + ' games');
             }
             delete player.client;
             var cache_key = 'player' + client.userid;
@@ -160,8 +153,7 @@ var Game = {
                     
                 }
             });*/
-        } 
-        else {
+        } else {
             console.log('that game was not found!');
         }
     }
